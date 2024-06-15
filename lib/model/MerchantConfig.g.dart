@@ -435,13 +435,18 @@ const FatherCateGorySchema = Schema(
   name: r'FatherCateGory',
   id: -1138378668459021578,
   properties: {
-    r'name': PropertySchema(
+    r'id': PropertySchema(
       id: 0,
+      name: r'id',
+      type: IsarType.string,
+    ),
+    r'name': PropertySchema(
+      id: 1,
       name: r'name',
       type: IsarType.string,
     ),
     r'subCateGorys': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'subCateGorys',
       type: IsarType.objectList,
       target: r'SubCateGory',
@@ -459,6 +464,7 @@ int _fatherCateGoryEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.id.length * 3;
   {
     final value = object.name;
     if (value != null) {
@@ -488,9 +494,10 @@ void _fatherCateGorySerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.name);
+  writer.writeString(offsets[0], object.id);
+  writer.writeString(offsets[1], object.name);
   writer.writeObjectList<SubCateGory>(
-    offsets[1],
+    offsets[2],
     allOffsets,
     SubCateGorySchema.serialize,
     object.subCateGorys,
@@ -504,9 +511,10 @@ FatherCateGory _fatherCateGoryDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = FatherCateGory();
-  object.name = reader.readStringOrNull(offsets[0]);
+  object.id = reader.readString(offsets[0]);
+  object.name = reader.readStringOrNull(offsets[1]);
   object.subCateGorys = reader.readObjectList<SubCateGory>(
-    offsets[1],
+    offsets[2],
     SubCateGorySchema.deserialize,
     allOffsets,
     SubCateGory(),
@@ -522,8 +530,10 @@ P _fatherCateGoryDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 1:
+      return (reader.readStringOrNull(offset)) as P;
+    case 2:
       return (reader.readObjectList<SubCateGory>(
         offset,
         SubCateGorySchema.deserialize,
@@ -537,6 +547,141 @@ P _fatherCateGoryDeserializeProp<P>(
 
 extension FatherCateGoryQueryFilter
     on QueryBuilder<FatherCateGory, FatherCateGory, QFilterCondition> {
+  QueryBuilder<FatherCateGory, FatherCateGory, QAfterFilterCondition> idEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<FatherCateGory, FatherCateGory, QAfterFilterCondition>
+      idGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<FatherCateGory, FatherCateGory, QAfterFilterCondition>
+      idLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<FatherCateGory, FatherCateGory, QAfterFilterCondition> idBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<FatherCateGory, FatherCateGory, QAfterFilterCondition>
+      idStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<FatherCateGory, FatherCateGory, QAfterFilterCondition>
+      idEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<FatherCateGory, FatherCateGory, QAfterFilterCondition>
+      idContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<FatherCateGory, FatherCateGory, QAfterFilterCondition> idMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'id',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<FatherCateGory, FatherCateGory, QAfterFilterCondition>
+      idIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<FatherCateGory, FatherCateGory, QAfterFilterCondition>
+      idIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'id',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<FatherCateGory, FatherCateGory, QAfterFilterCondition>
       nameIsNull() {
     return QueryBuilder.apply(this, (query) {
@@ -816,18 +961,23 @@ const SubCateGorySchema = Schema(
   name: r'SubCateGory',
   id: -5456565368808082475,
   properties: {
-    r'imagePath': PropertySchema(
+    r'id': PropertySchema(
       id: 0,
+      name: r'id',
+      type: IsarType.string,
+    ),
+    r'imagePath': PropertySchema(
+      id: 1,
       name: r'imagePath',
       type: IsarType.string,
     ),
     r'name': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'name',
       type: IsarType.string,
     ),
     r'units': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'units',
       type: IsarType.objectList,
       target: r'Unit',
@@ -845,6 +995,7 @@ int _subCateGoryEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.id.length * 3;
   {
     final value = object.imagePath;
     if (value != null) {
@@ -879,10 +1030,11 @@ void _subCateGorySerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.imagePath);
-  writer.writeString(offsets[1], object.name);
+  writer.writeString(offsets[0], object.id);
+  writer.writeString(offsets[1], object.imagePath);
+  writer.writeString(offsets[2], object.name);
   writer.writeObjectList<Unit>(
-    offsets[2],
+    offsets[3],
     allOffsets,
     UnitSchema.serialize,
     object.units,
@@ -896,10 +1048,11 @@ SubCateGory _subCateGoryDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = SubCateGory();
-  object.imagePath = reader.readStringOrNull(offsets[0]);
-  object.name = reader.readStringOrNull(offsets[1]);
+  object.id = reader.readString(offsets[0]);
+  object.imagePath = reader.readStringOrNull(offsets[1]);
+  object.name = reader.readStringOrNull(offsets[2]);
   object.units = reader.readObjectList<Unit>(
-    offsets[2],
+    offsets[3],
     UnitSchema.deserialize,
     allOffsets,
     Unit(),
@@ -915,10 +1068,12 @@ P _subCateGoryDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 1:
       return (reader.readStringOrNull(offset)) as P;
     case 2:
+      return (reader.readStringOrNull(offset)) as P;
+    case 3:
       return (reader.readObjectList<Unit>(
         offset,
         UnitSchema.deserialize,
@@ -932,6 +1087,136 @@ P _subCateGoryDeserializeProp<P>(
 
 extension SubCateGoryQueryFilter
     on QueryBuilder<SubCateGory, SubCateGory, QFilterCondition> {
+  QueryBuilder<SubCateGory, SubCateGory, QAfterFilterCondition> idEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubCateGory, SubCateGory, QAfterFilterCondition> idGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubCateGory, SubCateGory, QAfterFilterCondition> idLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubCateGory, SubCateGory, QAfterFilterCondition> idBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubCateGory, SubCateGory, QAfterFilterCondition> idStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubCateGory, SubCateGory, QAfterFilterCondition> idEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubCateGory, SubCateGory, QAfterFilterCondition> idContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubCateGory, SubCateGory, QAfterFilterCondition> idMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'id',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubCateGory, SubCateGory, QAfterFilterCondition> idIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<SubCateGory, SubCateGory, QAfterFilterCondition> idIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'id',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<SubCateGory, SubCateGory, QAfterFilterCondition>
       imagePathIsNull() {
     return QueryBuilder.apply(this, (query) {

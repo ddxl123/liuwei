@@ -1,10 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:isar/isar.dart';
 import 'package:liuwei/CustomerPage.dart';
 import 'package:liuwei/MerchantConfigPage.dart';
-import 'package:liuwei/model/MerchantConfig.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 import 'CustomerPageController.dart';
 import 'model/isarSchemas.dart';
@@ -29,6 +32,8 @@ class MyApp extends StatelessWidget {
         cardTheme: CardTheme(margin: EdgeInsets.all(10)),
       ),
       home: const MyHomePage(),
+      navigatorObservers: [FlutterSmartDialog.observer],
+      builder: FlutterSmartDialog.init(),
     );
   }
 }
@@ -73,7 +78,9 @@ class _MyHomePageState extends State<MyHomePage> {
             title: const Text("客户订单"),
             actions: [
               IconButton(
-                icon: Icon(Icons.settings),
+                icon: Row(
+                  children: [Icon(Icons.settings), Text("商家配置")],
+                ),
                 onPressed: () {
                   Get.to(() => MerchantConfigPage());
                 },

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:liuwei/CustomerPageController.dart';
 import 'package:liuwei/OrderPage.dart';
@@ -36,7 +37,11 @@ class CustomerPage extends StatelessWidget {
                         ),
                       ),
                       onPressed: () {
-                        Get.to(() => const OrderPage());
+                        SmartDialog.show(
+                          builder: (_) {
+                            return const OrderPage();
+                          },
+                        );
                       },
                     ),
                   ),

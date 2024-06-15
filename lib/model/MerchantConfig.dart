@@ -1,7 +1,7 @@
 import 'package:isar/isar.dart';
+import 'package:uuid/uuid.dart';
 
 part 'MerchantConfig.g.dart';
-
 
 /// 商家配置
 @collection
@@ -13,7 +13,10 @@ class MerchantConfig {
 /// 大类
 @embedded
 class FatherCateGory {
-  /// 名称唯一
+  /// 唯一 id
+  String id = const Uuid().v4();
+
+  /// 大类名称
   String? name;
   List<SubCateGory>? subCateGorys;
 }
@@ -21,6 +24,9 @@ class FatherCateGory {
 /// 子类
 @embedded
 class SubCateGory {
+  /// 唯一 id
+  String id = const Uuid().v4();
+
   /// 名称唯一
   String? name;
 
