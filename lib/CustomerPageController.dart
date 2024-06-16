@@ -1,62 +1,84 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:isar/isar.dart';
+import 'package:liuwei/MerchantConfigPageController.dart';
 import 'package:liuwei/main.dart';
+import 'package:liuwei/model/Customer.dart';
 import 'package:liuwei/model/MerchantConfig.dart';
 
-import 'model/Customer.dart';
+import 'HomePageController.dart';
 
 class CustomerPageController extends GetxController {
-  final Rx<MerchantConfig?> merchantConfig = Rx<MerchantConfig?>(null);
-  final customers = <Customer>[].obs;
+  late final int customerIndex;
 
-  final ScrollController scrollController = ScrollController();
+  final homePageController = Get.find<HomePageController>();
 
-  Future<void> updateMerchantConfig() async {
-    if (merchantConfig.value == null) {
-      return;
+  final merchantConfigPageController = Get.find<MerchantConfigPageController>();
+
+  final scrollController = ScrollController();
+
+  final deleteCustomerTextEditingController = TextEditingController();
+
+  /// [FatherCateGory.id]
+  final hideList = <String>{}.obs;
+
+  /// [CustomerUnit.id] to [CustomerUnit]
+  final id2CustomerUnit = <String, CustomerUnit>{};
+
+  void pageInit({required int index}) {
+    customerIndex = index;
+    for (var e in getCustomer.value.customerUnits) {
+      id2CustomerUnit[e.unitId!] = e;
     }
-    await gIsar.writeTxn(
-      () async {
-        await gIsar.merchantConfigs.put(merchantConfig.value!);
-      },
-    );
-    merchantConfig.refresh();
   }
 
-  /// 获取当前商家配置
-  Future<void> getCurrentConfig() async {
-    merchantConfig.value = await gIsar.merchantConfigs.where(sort: Sort.desc).findFirst();
-    merchantConfig.value?.fatherCateGorys = merchantConfig.value?.fatherCateGorys?.toList();
-    merchantConfig.value?.fatherCateGorys?.forEach(
-      (e) {
-        e.subCateGorys = e.subCateGorys?.toList();
-        e.subCateGorys?.forEach(
-          (e2) {
-            e2.units = e2.units?.toList();
-          },
-        );
-      },
-    );
-  }
+  CustomerUnit? getCustomerUnitByUnit(Unit unit) => id2CustomerUnit[unit.id];
 
-  /// 获取全部未结单的客户
-  Future<void> getAllUnOrderCustomer() async {
-    customers.clear();
-    customers.addAll(await gIsar.customers.filter().customerOrder((q) => q.closeEqualTo(false)).findAll());
-    for (var e in customers) {
-      e.dishes = e.dishes?.toList();
-      e.dishes?.forEach(
-        (e2) {
-          e2.customerDishUnits = e2.customerDishUnits?.toList();
+  MerchantConfig? get getMerchantConfig => merchantConfigPageController.merchantConfig.value;
+
+  List<FatherCateGory> get getAllShowedFatherCateGory => merchantConfigPageController.merchantConfig.value!.fatherCateGorys;
+
+  Rx<Customer> get getCustomer => homePageController.showCustomers[customerIndex];
+
+  /// [CustomerUnit] 加 1
+  Future<void> customerUnitPlus(Unit unit) async {
+    final customerUnit = getCustomerUnitByUnit(unit);
+    if (customerUnit == null) {
+      final newCustomerUnit = CustomerUnit()
+        ..unitId = unit.id
+        ..requiredCount += 1;
+      getCustomer.value.customerUnits.add(newCustomerUnit);
+      await gIsar.writeTxn(
+        () async {
+          await gIsar.customers.put(getCustomer.value);
         },
       );
+      id2CustomerUnit[unit.id] = newCustomerUnit;
+      getCustomer.refresh();
+    } else {
+      customerUnit.requiredCount += 1;
+      await gIsar.writeTxn(
+        () async {
+          await gIsar.customers.put(getCustomer.value);
+        },
+      );
+      getCustomer.refresh();
     }
   }
 
-  /// 刷新当前页码数据
-  Future<void> refreshPageData() async {
-    await getCurrentConfig();
-    await getAllUnOrderCustomer();
+  /// [CustomerUnit] 加 -1
+  Future<void> customerUnitSubtract(Unit unit) async {
+    final customerUnit = getCustomerUnitByUnit(unit);
+    if (customerUnit != null) {
+      customerUnit.requiredCount += -1;
+      if (customerUnit.requiredCount < 0) {
+        customerUnit.requiredCount = 0;
+      }
+      await gIsar.writeTxn(
+        () async {
+          await gIsar.customers.put(getCustomer.value);
+        },
+      );
+      homePageController.showCustomers.refresh();
+    }
   }
 }

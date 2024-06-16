@@ -1,4 +1,3 @@
-
 import 'package:isar/isar.dart';
 
 part 'Customer.g.dart';
@@ -7,59 +6,44 @@ part 'Customer.g.dart';
 @collection
 class Customer {
   Id id = Isar.autoIncrement;
-  List<CustomerDish>? dishes;
-  CustomerOrder? customerOrder;
+  List<CustomerUnit> customerUnits = [];
+  CustomerOrder customerOrder = CustomerOrder();
+
+  /// 是否已结单
+  bool close = false;
 }
 
 /// 单个客户单个菜品
 @embedded
-class CustomerDish {
-  /// 父类菜品
-  String? fatherCateGoryName;
-
-  /// 子类菜品
-  String? subCateGoryName;
-
-  /// 子类菜品图片path
-  String? imagePath;
-
-  /// 计量单位对应
-  List<CustomerDishUnit>? customerDishUnits;
-
-  /// 备注
-  String? note;
-}
-
-@embedded
-class CustomerDishUnit {
-  /// 计量单位名称
-  String? unitName;
+class CustomerUnit {
+  /// 计量单位id
+  String? unitId;
 
   /// 需要数量
-  int? requiredCount;
+  int requiredCount = 0;
 
   /// 已出菜数量
-  int? foodDoneCount;
+  int foodDoneCount = 0;
+
+  /// 备注
+  String note = "";
 }
 
 /// 单个客户"下单（未付款）"
 @embedded
 class CustomerOrder {
   /// 下单时间
-  DateTime? orderTime;
+  DateTime orderTime = DateTime.now();
+
+  /// 桌号
+  String tableNum = "-";
 
   /// 包装费
-  double? packPrice;
+  double packPrice = 0;
 
-  /// 取餐码
-  int? pickupCode;
-
-  /// 应该付款金额
-  double? shouldPayPrice;
+  /// 取餐号
+  int pickupCode = -1;
 
   /// 已付款金额
-  double? paidPrice;
-
-  /// 是否已结单
-  bool? close;
+  double paidPrice = 0;
 }

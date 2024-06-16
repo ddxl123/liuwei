@@ -17,17 +17,22 @@ const CustomerSchema = CollectionSchema(
   name: r'Customer',
   id: -7623823084711604343,
   properties: {
-    r'customerOrder': PropertySchema(
+    r'close': PropertySchema(
       id: 0,
+      name: r'close',
+      type: IsarType.bool,
+    ),
+    r'customerOrder': PropertySchema(
+      id: 1,
       name: r'customerOrder',
       type: IsarType.object,
       target: r'CustomerOrder',
     ),
-    r'dishes': PropertySchema(
-      id: 1,
-      name: r'dishes',
+    r'customerUnits': PropertySchema(
+      id: 2,
+      name: r'customerUnits',
       type: IsarType.objectList,
-      target: r'CustomerDish',
+      target: r'CustomerUnit',
     )
   },
   estimateSize: _customerEstimateSize,
@@ -38,8 +43,7 @@ const CustomerSchema = CollectionSchema(
   indexes: {},
   links: {},
   embeddedSchemas: {
-    r'CustomerDish': CustomerDishSchema,
-    r'CustomerDishUnit': CustomerDishUnitSchema,
+    r'CustomerUnit': CustomerUnitSchema,
     r'CustomerOrder': CustomerOrderSchema
   },
   getId: _customerGetId,
@@ -54,26 +58,15 @@ int _customerEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 +
+      CustomerOrderSchema.estimateSize(
+          object.customerOrder, allOffsets[CustomerOrder]!, allOffsets);
+  bytesCount += 3 + object.customerUnits.length * 3;
   {
-    final value = object.customerOrder;
-    if (value != null) {
-      bytesCount += 3 +
-          CustomerOrderSchema.estimateSize(
-              value, allOffsets[CustomerOrder]!, allOffsets);
-    }
-  }
-  {
-    final list = object.dishes;
-    if (list != null) {
-      bytesCount += 3 + list.length * 3;
-      {
-        final offsets = allOffsets[CustomerDish]!;
-        for (var i = 0; i < list.length; i++) {
-          final value = list[i];
-          bytesCount +=
-              CustomerDishSchema.estimateSize(value, offsets, allOffsets);
-        }
-      }
+    final offsets = allOffsets[CustomerUnit]!;
+    for (var i = 0; i < object.customerUnits.length; i++) {
+      final value = object.customerUnits[i];
+      bytesCount += CustomerUnitSchema.estimateSize(value, offsets, allOffsets);
     }
   }
   return bytesCount;
@@ -85,17 +78,18 @@ void _customerSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
+  writer.writeBool(offsets[0], object.close);
   writer.writeObject<CustomerOrder>(
-    offsets[0],
+    offsets[1],
     allOffsets,
     CustomerOrderSchema.serialize,
     object.customerOrder,
   );
-  writer.writeObjectList<CustomerDish>(
-    offsets[1],
+  writer.writeObjectList<CustomerUnit>(
+    offsets[2],
     allOffsets,
-    CustomerDishSchema.serialize,
-    object.dishes,
+    CustomerUnitSchema.serialize,
+    object.customerUnits,
   );
 }
 
@@ -106,17 +100,20 @@ Customer _customerDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = Customer();
+  object.close = reader.readBool(offsets[0]);
   object.customerOrder = reader.readObjectOrNull<CustomerOrder>(
-    offsets[0],
-    CustomerOrderSchema.deserialize,
-    allOffsets,
-  );
-  object.dishes = reader.readObjectList<CustomerDish>(
-    offsets[1],
-    CustomerDishSchema.deserialize,
-    allOffsets,
-    CustomerDish(),
-  );
+        offsets[1],
+        CustomerOrderSchema.deserialize,
+        allOffsets,
+      ) ??
+      CustomerOrder();
+  object.customerUnits = reader.readObjectList<CustomerUnit>(
+        offsets[2],
+        CustomerUnitSchema.deserialize,
+        allOffsets,
+        CustomerUnit(),
+      ) ??
+      [];
   object.id = id;
   return object;
 }
@@ -129,18 +126,22 @@ P _customerDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readObjectOrNull<CustomerOrder>(
-        offset,
-        CustomerOrderSchema.deserialize,
-        allOffsets,
-      )) as P;
+      return (reader.readBool(offset)) as P;
     case 1:
-      return (reader.readObjectList<CustomerDish>(
-        offset,
-        CustomerDishSchema.deserialize,
-        allOffsets,
-        CustomerDish(),
-      )) as P;
+      return (reader.readObjectOrNull<CustomerOrder>(
+            offset,
+            CustomerOrderSchema.deserialize,
+            allOffsets,
+          ) ??
+          CustomerOrder()) as P;
+    case 2:
+      return (reader.readObjectList<CustomerUnit>(
+            offset,
+            CustomerUnitSchema.deserialize,
+            allOffsets,
+            CustomerUnit(),
+          ) ??
+          []) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -235,45 +236,21 @@ extension CustomerQueryWhere on QueryBuilder<Customer, Customer, QWhereClause> {
 
 extension CustomerQueryFilter
     on QueryBuilder<Customer, Customer, QFilterCondition> {
-  QueryBuilder<Customer, Customer, QAfterFilterCondition>
-      customerOrderIsNull() {
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> closeEqualTo(
+      bool value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'customerOrder',
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'close',
+        value: value,
       ));
     });
   }
 
   QueryBuilder<Customer, Customer, QAfterFilterCondition>
-      customerOrderIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'customerOrder',
-      ));
-    });
-  }
-
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> dishesIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'dishes',
-      ));
-    });
-  }
-
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> dishesIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'dishes',
-      ));
-    });
-  }
-
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> dishesLengthEqualTo(
-      int length) {
+      customerUnitsLengthEqualTo(int length) {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'dishes',
+        r'customerUnits',
         length,
         true,
         length,
@@ -282,10 +259,11 @@ extension CustomerQueryFilter
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> dishesIsEmpty() {
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerUnitsIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'dishes',
+        r'customerUnits',
         0,
         true,
         0,
@@ -294,10 +272,11 @@ extension CustomerQueryFilter
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> dishesIsNotEmpty() {
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerUnitsIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'dishes',
+        r'customerUnits',
         0,
         false,
         999999,
@@ -306,13 +285,14 @@ extension CustomerQueryFilter
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> dishesLengthLessThan(
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerUnitsLengthLessThan(
     int length, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'dishes',
+        r'customerUnits',
         0,
         true,
         length,
@@ -322,13 +302,13 @@ extension CustomerQueryFilter
   }
 
   QueryBuilder<Customer, Customer, QAfterFilterCondition>
-      dishesLengthGreaterThan(
+      customerUnitsLengthGreaterThan(
     int length, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'dishes',
+        r'customerUnits',
         length,
         include,
         999999,
@@ -337,7 +317,8 @@ extension CustomerQueryFilter
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> dishesLengthBetween(
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerUnitsLengthBetween(
     int lower,
     int upper, {
     bool includeLower = true,
@@ -345,7 +326,7 @@ extension CustomerQueryFilter
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'dishes',
+        r'customerUnits',
         lower,
         includeLower,
         upper,
@@ -416,10 +397,10 @@ extension CustomerQueryObject
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> dishesElement(
-      FilterQuery<CustomerDish> q) {
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> customerUnitsElement(
+      FilterQuery<CustomerUnit> q) {
     return QueryBuilder.apply(this, (query) {
-      return query.object(q, r'dishes');
+      return query.object(q, r'customerUnits');
     });
   }
 }
@@ -427,10 +408,34 @@ extension CustomerQueryObject
 extension CustomerQueryLinks
     on QueryBuilder<Customer, Customer, QFilterCondition> {}
 
-extension CustomerQuerySortBy on QueryBuilder<Customer, Customer, QSortBy> {}
+extension CustomerQuerySortBy on QueryBuilder<Customer, Customer, QSortBy> {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByClose() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'close', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByCloseDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'close', Sort.desc);
+    });
+  }
+}
 
 extension CustomerQuerySortThenBy
     on QueryBuilder<Customer, Customer, QSortThenBy> {
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByClose() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'close', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByCloseDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'close', Sort.desc);
+    });
+  }
+
   QueryBuilder<Customer, Customer, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -445,7 +450,13 @@ extension CustomerQuerySortThenBy
 }
 
 extension CustomerQueryWhereDistinct
-    on QueryBuilder<Customer, Customer, QDistinct> {}
+    on QueryBuilder<Customer, Customer, QDistinct> {
+  QueryBuilder<Customer, Customer, QDistinct> distinctByClose() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'close');
+    });
+  }
+}
 
 extension CustomerQueryProperty
     on QueryBuilder<Customer, Customer, QQueryProperty> {
@@ -455,17 +466,23 @@ extension CustomerQueryProperty
     });
   }
 
-  QueryBuilder<Customer, CustomerOrder?, QQueryOperations>
+  QueryBuilder<Customer, bool, QQueryOperations> closeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'close');
+    });
+  }
+
+  QueryBuilder<Customer, CustomerOrder, QQueryOperations>
       customerOrderProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'customerOrder');
     });
   }
 
-  QueryBuilder<Customer, List<CustomerDish>?, QQueryOperations>
-      dishesProperty() {
+  QueryBuilder<Customer, List<CustomerUnit>, QQueryOperations>
+      customerUnitsProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'dishes');
+      return query.addPropertyName(r'customerUnits');
     });
   }
 }
@@ -477,83 +494,46 @@ extension CustomerQueryProperty
 // coverage:ignore-file
 // ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
 
-const CustomerDishSchema = Schema(
-  name: r'CustomerDish',
-  id: -75567820968762462,
+const CustomerUnitSchema = Schema(
+  name: r'CustomerUnit',
+  id: 1288013750335326809,
   properties: {
-    r'customerDishUnits': PropertySchema(
+    r'foodDoneCount': PropertySchema(
       id: 0,
-      name: r'customerDishUnits',
-      type: IsarType.objectList,
-      target: r'CustomerDishUnit',
-    ),
-    r'fatherCateGoryName': PropertySchema(
-      id: 1,
-      name: r'fatherCateGoryName',
-      type: IsarType.string,
-    ),
-    r'imagePath': PropertySchema(
-      id: 2,
-      name: r'imagePath',
-      type: IsarType.string,
+      name: r'foodDoneCount',
+      type: IsarType.long,
     ),
     r'note': PropertySchema(
-      id: 3,
+      id: 1,
       name: r'note',
       type: IsarType.string,
     ),
-    r'subCateGoryName': PropertySchema(
-      id: 4,
-      name: r'subCateGoryName',
+    r'requiredCount': PropertySchema(
+      id: 2,
+      name: r'requiredCount',
+      type: IsarType.long,
+    ),
+    r'unitId': PropertySchema(
+      id: 3,
+      name: r'unitId',
       type: IsarType.string,
     )
   },
-  estimateSize: _customerDishEstimateSize,
-  serialize: _customerDishSerialize,
-  deserialize: _customerDishDeserialize,
-  deserializeProp: _customerDishDeserializeProp,
+  estimateSize: _customerUnitEstimateSize,
+  serialize: _customerUnitSerialize,
+  deserialize: _customerUnitDeserialize,
+  deserializeProp: _customerUnitDeserializeProp,
 );
 
-int _customerDishEstimateSize(
-  CustomerDish object,
+int _customerUnitEstimateSize(
+  CustomerUnit object,
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.note.length * 3;
   {
-    final list = object.customerDishUnits;
-    if (list != null) {
-      bytesCount += 3 + list.length * 3;
-      {
-        final offsets = allOffsets[CustomerDishUnit]!;
-        for (var i = 0; i < list.length; i++) {
-          final value = list[i];
-          bytesCount +=
-              CustomerDishUnitSchema.estimateSize(value, offsets, allOffsets);
-        }
-      }
-    }
-  }
-  {
-    final value = object.fatherCateGoryName;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
-  {
-    final value = object.imagePath;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
-  {
-    final value = object.note;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
-  {
-    final value = object.subCateGoryName;
+    final value = object.unitId;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
     }
@@ -561,45 +541,33 @@ int _customerDishEstimateSize(
   return bytesCount;
 }
 
-void _customerDishSerialize(
-  CustomerDish object,
+void _customerUnitSerialize(
+  CustomerUnit object,
   IsarWriter writer,
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeObjectList<CustomerDishUnit>(
-    offsets[0],
-    allOffsets,
-    CustomerDishUnitSchema.serialize,
-    object.customerDishUnits,
-  );
-  writer.writeString(offsets[1], object.fatherCateGoryName);
-  writer.writeString(offsets[2], object.imagePath);
-  writer.writeString(offsets[3], object.note);
-  writer.writeString(offsets[4], object.subCateGoryName);
+  writer.writeLong(offsets[0], object.foodDoneCount);
+  writer.writeString(offsets[1], object.note);
+  writer.writeLong(offsets[2], object.requiredCount);
+  writer.writeString(offsets[3], object.unitId);
 }
 
-CustomerDish _customerDishDeserialize(
+CustomerUnit _customerUnitDeserialize(
   Id id,
   IsarReader reader,
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  final object = CustomerDish();
-  object.customerDishUnits = reader.readObjectList<CustomerDishUnit>(
-    offsets[0],
-    CustomerDishUnitSchema.deserialize,
-    allOffsets,
-    CustomerDishUnit(),
-  );
-  object.fatherCateGoryName = reader.readStringOrNull(offsets[1]);
-  object.imagePath = reader.readStringOrNull(offsets[2]);
-  object.note = reader.readStringOrNull(offsets[3]);
-  object.subCateGoryName = reader.readStringOrNull(offsets[4]);
+  final object = CustomerUnit();
+  object.foodDoneCount = reader.readLong(offsets[0]);
+  object.note = reader.readString(offsets[1]);
+  object.requiredCount = reader.readLong(offsets[2]);
+  object.unitId = reader.readStringOrNull(offsets[3]);
   return object;
 }
 
-P _customerDishDeserializeProp<P>(
+P _customerUnitDeserializeProp<P>(
   IsarReader reader,
   int propertyId,
   int offset,
@@ -607,461 +575,78 @@ P _customerDishDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readObjectList<CustomerDishUnit>(
-        offset,
-        CustomerDishUnitSchema.deserialize,
-        allOffsets,
-        CustomerDishUnit(),
-      )) as P;
+      return (reader.readLong(offset)) as P;
     case 1:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 3:
-      return (reader.readStringOrNull(offset)) as P;
-    case 4:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
 }
 
-extension CustomerDishQueryFilter
-    on QueryBuilder<CustomerDish, CustomerDish, QFilterCondition> {
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      customerDishUnitsIsNull() {
+extension CustomerUnitQueryFilter
+    on QueryBuilder<CustomerUnit, CustomerUnit, QFilterCondition> {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      foodDoneCountEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'customerDishUnits',
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'foodDoneCount',
+        value: value,
       ));
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      customerDishUnitsIsNotNull() {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      foodDoneCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'customerDishUnits',
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'foodDoneCount',
+        value: value,
       ));
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      customerDishUnitsLengthEqualTo(int length) {
-    return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'customerDishUnits',
-        length,
-        true,
-        length,
-        true,
-      );
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      customerDishUnitsIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'customerDishUnits',
-        0,
-        true,
-        0,
-        true,
-      );
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      customerDishUnitsIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'customerDishUnits',
-        0,
-        false,
-        999999,
-        true,
-      );
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      customerDishUnitsLengthLessThan(
-    int length, {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      foodDoneCountLessThan(
+    int value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'customerDishUnits',
-        0,
-        true,
-        length,
-        include,
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'foodDoneCount',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      customerDishUnitsLengthGreaterThan(
-    int length, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'customerDishUnits',
-        length,
-        include,
-        999999,
-        true,
-      );
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      customerDishUnitsLengthBetween(
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      foodDoneCountBetween(
     int lower,
     int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'customerDishUnits',
-        lower,
-        includeLower,
-        upper,
-        includeUpper,
-      );
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'fatherCateGoryName',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'fatherCateGoryName',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'fatherCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'fatherCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameLessThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'fatherCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameBetween(
-    String? lower,
-    String? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'fatherCateGoryName',
+        property: r'foodDoneCount',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameStartsWith(
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteEqualTo(
     String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'fatherCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'fatherCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'fatherCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'fatherCateGoryName',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'fatherCateGoryName',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      fatherCateGoryNameIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'fatherCateGoryName',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'imagePath',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'imagePath',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'imagePath',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'imagePath',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathLessThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'imagePath',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathBetween(
-    String? lower,
-    String? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'imagePath',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'imagePath',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'imagePath',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'imagePath',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'imagePath',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'imagePath',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      imagePathIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'imagePath',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition> noteIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'note',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      noteIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'note',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition> noteEqualTo(
-    String? value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1073,9 +658,9 @@ extension CustomerDishQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
       noteGreaterThan(
-    String? value, {
+    String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -1089,8 +674,8 @@ extension CustomerDishQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition> noteLessThan(
-    String? value, {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteLessThan(
+    String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -1104,9 +689,9 @@ extension CustomerDishQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition> noteBetween(
-    String? lower,
-    String? upper, {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteBetween(
+    String lower,
+    String upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
@@ -1123,7 +708,7 @@ extension CustomerDishQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
       noteStartsWith(
     String value, {
     bool caseSensitive = true,
@@ -1137,7 +722,7 @@ extension CustomerDishQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition> noteEndsWith(
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -1150,7 +735,7 @@ extension CustomerDishQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition> noteContains(
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteContains(
       String value,
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1162,7 +747,7 @@ extension CustomerDishQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition> noteMatches(
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteMatches(
       String pattern,
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1174,7 +759,7 @@ extension CustomerDishQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
       noteIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1184,7 +769,7 @@ extension CustomerDishQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
       noteIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
@@ -1194,353 +779,8 @@ extension CustomerDishQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'subCateGoryName',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'subCateGoryName',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'subCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'subCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameLessThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'subCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameBetween(
-    String? lower,
-    String? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'subCateGoryName',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'subCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'subCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'subCateGoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'subCateGoryName',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'subCateGoryName',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      subCateGoryNameIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'subCateGoryName',
-        value: '',
-      ));
-    });
-  }
-}
-
-extension CustomerDishQueryObject
-    on QueryBuilder<CustomerDish, CustomerDish, QFilterCondition> {
-  QueryBuilder<CustomerDish, CustomerDish, QAfterFilterCondition>
-      customerDishUnitsElement(FilterQuery<CustomerDishUnit> q) {
-    return QueryBuilder.apply(this, (query) {
-      return query.object(q, r'customerDishUnits');
-    });
-  }
-}
-
-// coverage:ignore-file
-// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
-
-const CustomerDishUnitSchema = Schema(
-  name: r'CustomerDishUnit',
-  id: -8463885370622287709,
-  properties: {
-    r'foodDoneCount': PropertySchema(
-      id: 0,
-      name: r'foodDoneCount',
-      type: IsarType.long,
-    ),
-    r'requiredCount': PropertySchema(
-      id: 1,
-      name: r'requiredCount',
-      type: IsarType.long,
-    ),
-    r'unitName': PropertySchema(
-      id: 2,
-      name: r'unitName',
-      type: IsarType.string,
-    )
-  },
-  estimateSize: _customerDishUnitEstimateSize,
-  serialize: _customerDishUnitSerialize,
-  deserialize: _customerDishUnitDeserialize,
-  deserializeProp: _customerDishUnitDeserializeProp,
-);
-
-int _customerDishUnitEstimateSize(
-  CustomerDishUnit object,
-  List<int> offsets,
-  Map<Type, List<int>> allOffsets,
-) {
-  var bytesCount = offsets.last;
-  {
-    final value = object.unitName;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
-  return bytesCount;
-}
-
-void _customerDishUnitSerialize(
-  CustomerDishUnit object,
-  IsarWriter writer,
-  List<int> offsets,
-  Map<Type, List<int>> allOffsets,
-) {
-  writer.writeLong(offsets[0], object.foodDoneCount);
-  writer.writeLong(offsets[1], object.requiredCount);
-  writer.writeString(offsets[2], object.unitName);
-}
-
-CustomerDishUnit _customerDishUnitDeserialize(
-  Id id,
-  IsarReader reader,
-  List<int> offsets,
-  Map<Type, List<int>> allOffsets,
-) {
-  final object = CustomerDishUnit();
-  object.foodDoneCount = reader.readLongOrNull(offsets[0]);
-  object.requiredCount = reader.readLongOrNull(offsets[1]);
-  object.unitName = reader.readStringOrNull(offsets[2]);
-  return object;
-}
-
-P _customerDishUnitDeserializeProp<P>(
-  IsarReader reader,
-  int propertyId,
-  int offset,
-  Map<Type, List<int>> allOffsets,
-) {
-  switch (propertyId) {
-    case 0:
-      return (reader.readLongOrNull(offset)) as P;
-    case 1:
-      return (reader.readLongOrNull(offset)) as P;
-    case 2:
-      return (reader.readStringOrNull(offset)) as P;
-    default:
-      throw IsarError('Unknown property with id $propertyId');
-  }
-}
-
-extension CustomerDishUnitQueryFilter
-    on QueryBuilder<CustomerDishUnit, CustomerDishUnit, QFilterCondition> {
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      foodDoneCountIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'foodDoneCount',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      foodDoneCountIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'foodDoneCount',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      foodDoneCountEqualTo(int? value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'foodDoneCount',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      foodDoneCountGreaterThan(
-    int? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'foodDoneCount',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      foodDoneCountLessThan(
-    int? value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'foodDoneCount',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      foodDoneCountBetween(
-    int? lower,
-    int? upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'foodDoneCount',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      requiredCountIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'requiredCount',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      requiredCountIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'requiredCount',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      requiredCountEqualTo(int? value) {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      requiredCountEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'requiredCount',
@@ -1549,9 +789,9 @@ extension CustomerDishUnitQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
       requiredCountGreaterThan(
-    int? value, {
+    int value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1563,9 +803,9 @@ extension CustomerDishUnitQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
       requiredCountLessThan(
-    int? value, {
+    int value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1577,10 +817,10 @@ extension CustomerDishUnitQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
       requiredCountBetween(
-    int? lower,
-    int? upper, {
+    int lower,
+    int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -1595,40 +835,39 @@ extension CustomerDishUnitQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameIsNull() {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      unitIdIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'unitName',
+        property: r'unitId',
       ));
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameIsNotNull() {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      unitIdIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'unitName',
+        property: r'unitId',
       ));
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameEqualTo(
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> unitIdEqualTo(
     String? value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'unitName',
+        property: r'unitId',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameGreaterThan(
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      unitIdGreaterThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1636,15 +875,15 @@ extension CustomerDishUnitQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'unitName',
+        property: r'unitId',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameLessThan(
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      unitIdLessThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
@@ -1652,15 +891,14 @@ extension CustomerDishUnitQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'unitName',
+        property: r'unitId',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameBetween(
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> unitIdBetween(
     String? lower,
     String? upper, {
     bool includeLower = true,
@@ -1669,7 +907,7 @@ extension CustomerDishUnitQueryFilter
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'unitName',
+        property: r'unitId',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -1679,79 +917,80 @@ extension CustomerDishUnitQueryFilter
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameStartsWith(
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      unitIdStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'unitName',
+        property: r'unitId',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameEndsWith(
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      unitIdEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'unitName',
+        property: r'unitId',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      unitIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
-        property: r'unitName',
+        property: r'unitId',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> unitIdMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
-        property: r'unitName',
+        property: r'unitId',
         wildcard: pattern,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameIsEmpty() {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      unitIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'unitName',
+        property: r'unitId',
         value: '',
       ));
     });
   }
 
-  QueryBuilder<CustomerDishUnit, CustomerDishUnit, QAfterFilterCondition>
-      unitNameIsNotEmpty() {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      unitIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'unitName',
+        property: r'unitId',
         value: '',
       ));
     });
   }
 }
 
-extension CustomerDishUnitQueryObject
-    on QueryBuilder<CustomerDishUnit, CustomerDishUnit, QFilterCondition> {}
+extension CustomerUnitQueryObject
+    on QueryBuilder<CustomerUnit, CustomerUnit, QFilterCondition> {}
 
 // coverage:ignore-file
 // ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
@@ -1760,35 +999,30 @@ const CustomerOrderSchema = Schema(
   name: r'CustomerOrder',
   id: 7813251628506524948,
   properties: {
-    r'close': PropertySchema(
-      id: 0,
-      name: r'close',
-      type: IsarType.bool,
-    ),
     r'orderTime': PropertySchema(
-      id: 1,
+      id: 0,
       name: r'orderTime',
       type: IsarType.dateTime,
     ),
     r'packPrice': PropertySchema(
-      id: 2,
+      id: 1,
       name: r'packPrice',
       type: IsarType.double,
     ),
     r'paidPrice': PropertySchema(
-      id: 3,
+      id: 2,
       name: r'paidPrice',
       type: IsarType.double,
     ),
     r'pickupCode': PropertySchema(
-      id: 4,
+      id: 3,
       name: r'pickupCode',
       type: IsarType.long,
     ),
-    r'shouldPayPrice': PropertySchema(
-      id: 5,
-      name: r'shouldPayPrice',
-      type: IsarType.double,
+    r'tableNum': PropertySchema(
+      id: 4,
+      name: r'tableNum',
+      type: IsarType.string,
     )
   },
   estimateSize: _customerOrderEstimateSize,
@@ -1803,6 +1037,7 @@ int _customerOrderEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.tableNum.length * 3;
   return bytesCount;
 }
 
@@ -1812,12 +1047,11 @@ void _customerOrderSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeBool(offsets[0], object.close);
-  writer.writeDateTime(offsets[1], object.orderTime);
-  writer.writeDouble(offsets[2], object.packPrice);
-  writer.writeDouble(offsets[3], object.paidPrice);
-  writer.writeLong(offsets[4], object.pickupCode);
-  writer.writeDouble(offsets[5], object.shouldPayPrice);
+  writer.writeDateTime(offsets[0], object.orderTime);
+  writer.writeDouble(offsets[1], object.packPrice);
+  writer.writeDouble(offsets[2], object.paidPrice);
+  writer.writeLong(offsets[3], object.pickupCode);
+  writer.writeString(offsets[4], object.tableNum);
 }
 
 CustomerOrder _customerOrderDeserialize(
@@ -1827,12 +1061,11 @@ CustomerOrder _customerOrderDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = CustomerOrder();
-  object.close = reader.readBoolOrNull(offsets[0]);
-  object.orderTime = reader.readDateTimeOrNull(offsets[1]);
-  object.packPrice = reader.readDoubleOrNull(offsets[2]);
-  object.paidPrice = reader.readDoubleOrNull(offsets[3]);
-  object.pickupCode = reader.readLongOrNull(offsets[4]);
-  object.shouldPayPrice = reader.readDoubleOrNull(offsets[5]);
+  object.orderTime = reader.readDateTime(offsets[0]);
+  object.packPrice = reader.readDouble(offsets[1]);
+  object.paidPrice = reader.readDouble(offsets[2]);
+  object.pickupCode = reader.readLong(offsets[3]);
+  object.tableNum = reader.readString(offsets[4]);
   return object;
 }
 
@@ -1844,17 +1077,15 @@ P _customerOrderDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readBoolOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 1:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 2:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 3:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 4:
-      return (reader.readLongOrNull(offset)) as P;
-    case 5:
-      return (reader.readDoubleOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -1863,53 +1094,7 @@ P _customerOrderDeserializeProp<P>(
 extension CustomerOrderQueryFilter
     on QueryBuilder<CustomerOrder, CustomerOrder, QFilterCondition> {
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      closeIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'close',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      closeIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'close',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      closeEqualTo(bool? value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'close',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      orderTimeIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'orderTime',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      orderTimeIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'orderTime',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      orderTimeEqualTo(DateTime? value) {
+      orderTimeEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'orderTime',
@@ -1920,7 +1105,7 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       orderTimeGreaterThan(
-    DateTime? value, {
+    DateTime value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1934,7 +1119,7 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       orderTimeLessThan(
-    DateTime? value, {
+    DateTime value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1948,8 +1133,8 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       orderTimeBetween(
-    DateTime? lower,
-    DateTime? upper, {
+    DateTime lower,
+    DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -1965,26 +1150,8 @@ extension CustomerOrderQueryFilter
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      packPriceIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'packPrice',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      packPriceIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'packPrice',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       packPriceEqualTo(
-    double? value, {
+    double value, {
     double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1998,7 +1165,7 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       packPriceGreaterThan(
-    double? value, {
+    double value, {
     bool include = false,
     double epsilon = Query.epsilon,
   }) {
@@ -2014,7 +1181,7 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       packPriceLessThan(
-    double? value, {
+    double value, {
     bool include = false,
     double epsilon = Query.epsilon,
   }) {
@@ -2030,8 +1197,8 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       packPriceBetween(
-    double? lower,
-    double? upper, {
+    double lower,
+    double upper, {
     bool includeLower = true,
     bool includeUpper = true,
     double epsilon = Query.epsilon,
@@ -2049,26 +1216,8 @@ extension CustomerOrderQueryFilter
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      paidPriceIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'paidPrice',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      paidPriceIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'paidPrice',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       paidPriceEqualTo(
-    double? value, {
+    double value, {
     double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -2082,7 +1231,7 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       paidPriceGreaterThan(
-    double? value, {
+    double value, {
     bool include = false,
     double epsilon = Query.epsilon,
   }) {
@@ -2098,7 +1247,7 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       paidPriceLessThan(
-    double? value, {
+    double value, {
     bool include = false,
     double epsilon = Query.epsilon,
   }) {
@@ -2114,8 +1263,8 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       paidPriceBetween(
-    double? lower,
-    double? upper, {
+    double lower,
+    double upper, {
     bool includeLower = true,
     bool includeUpper = true,
     double epsilon = Query.epsilon,
@@ -2133,25 +1282,7 @@ extension CustomerOrderQueryFilter
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      pickupCodeIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'pickupCode',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      pickupCodeIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'pickupCode',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      pickupCodeEqualTo(int? value) {
+      pickupCodeEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'pickupCode',
@@ -2162,7 +1293,7 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       pickupCodeGreaterThan(
-    int? value, {
+    int value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -2176,7 +1307,7 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       pickupCodeLessThan(
-    int? value, {
+    int value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -2190,8 +1321,8 @@ extension CustomerOrderQueryFilter
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
       pickupCodeBetween(
-    int? lower,
-    int? upper, {
+    int lower,
+    int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
@@ -2207,85 +1338,137 @@ extension CustomerOrderQueryFilter
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      shouldPayPriceIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'shouldPayPrice',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      shouldPayPriceIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'shouldPayPrice',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      shouldPayPriceEqualTo(
-    double? value, {
-    double epsilon = Query.epsilon,
+      tableNumEqualTo(
+    String value, {
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'shouldPayPrice',
+        property: r'tableNum',
         value: value,
-        epsilon: epsilon,
+        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      shouldPayPriceGreaterThan(
-    double? value, {
+      tableNumGreaterThan(
+    String value, {
     bool include = false,
-    double epsilon = Query.epsilon,
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'shouldPayPrice',
+        property: r'tableNum',
         value: value,
-        epsilon: epsilon,
+        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      shouldPayPriceLessThan(
-    double? value, {
+      tableNumLessThan(
+    String value, {
     bool include = false,
-    double epsilon = Query.epsilon,
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'shouldPayPrice',
+        property: r'tableNum',
         value: value,
-        epsilon: epsilon,
+        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      shouldPayPriceBetween(
-    double? lower,
-    double? upper, {
+      tableNumBetween(
+    String lower,
+    String upper, {
     bool includeLower = true,
     bool includeUpper = true,
-    double epsilon = Query.epsilon,
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'shouldPayPrice',
+        property: r'tableNum',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
-        epsilon: epsilon,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
+      tableNumStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'tableNum',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
+      tableNumEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'tableNum',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
+      tableNumContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'tableNum',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
+      tableNumMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'tableNum',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
+      tableNumIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'tableNum',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
+      tableNumIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'tableNum',
+        value: '',
       ));
     });
   }
