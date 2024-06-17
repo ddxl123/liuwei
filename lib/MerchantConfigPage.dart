@@ -165,9 +165,11 @@ class MerchantConfigPage extends StatelessWidget {
                                   children: [
                                     Icon(Icons.circle, size: 10),
                                     Text(" 下一次取餐号为：", style: TextStyle(fontSize: 18)),
-                                    Text(
-                                      "${merchantConfigPageController.merchantConfig.value!.pickupCode.nextCode}",
-                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+                                    Obx(
+                                      () => Text(
+                                        "${merchantConfigPageController.merchantConfig.value!.pickupCode.nextCode}",
+                                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+                                      ),
                                     ),
                                     SizedBox(width: 10),
                                     TextButton(
@@ -217,7 +219,7 @@ class MerchantConfigPage extends StatelessWidget {
                                 Row(
                                   children: [
                                     Icon(Icons.circle, size: 10),
-                                    Text(" 设备码：", style: TextStyle(fontSize: 18)),
+                                    Text(" 设备号：", style: TextStyle(fontSize: 18)),
                                     SizedBox(
                                       width: 100,
                                       child: TextField(
@@ -231,7 +233,7 @@ class MerchantConfigPage extends StatelessWidget {
                                       ),
                                     ),
                                     Expanded(
-                                      child: Text("当店内拥有多台出餐设备时，可以通过设置不同的设备码来确保取餐码的唯一性，避免重复。为 0 时表示只有一台设备。"),
+                                      child: Text("店内多台出餐设备使用\"设备号-餐号\"作为取餐号确保唯一性，单一设备时仅用\"餐号\"。"),
                                     ),
                                   ],
                                 ),
@@ -270,8 +272,7 @@ class MerchantConfigPage extends StatelessWidget {
                       builder: (_) {
                         return OkCancelDialogWidget(
                           onOk: () async {
-                            merchantConfigPageController.merchantConfig.value!.fatherCateGorys.remove(fatherCateGory);
-                            merchantConfigPageController.merchantConfig.refresh();
+                            await merchantConfigPageController.removeFatherCateGory(fatherCateGory: fatherCateGory);
                           },
                         );
                       },
@@ -351,8 +352,10 @@ class MerchantConfigPage extends StatelessWidget {
                                                           builder: (_) {
                                                             return OkCancelDialogWidget(
                                                               onOk: () async {
-                                                                fatherCateGory.subCateGorys.remove(fatherCateGory.subCateGorys[index]);
-                                                                merchantConfigPageController.merchantConfig.refresh();
+                                                                await merchantConfigPageController.removeSubCateGory(
+                                                                  fatherCateGory: fatherCateGory,
+                                                                  subCateGory: fatherCateGory.subCateGorys[index],
+                                                                );
                                                               },
                                                             );
                                                           },
@@ -368,7 +371,6 @@ class MerchantConfigPage extends StatelessWidget {
                                                       controller: titleTextEditingController,
                                                       onChanged: (p) async {
                                                         fatherCateGory.subCateGorys[index].name = titleTextEditingController.text;
-                                                        // await updateFatherCateGory();
                                                       },
                                                     ),
                                                   ),
@@ -381,9 +383,13 @@ class MerchantConfigPage extends StatelessWidget {
                                                   child: Text("+ 添加单位", style: TextStyle(color: Colors.blue)),
                                                   onPressed: () async {
                                                     final subCateGory = fatherCateGory.subCateGorys[index];
-                                                    subCateGory.units.add(Unit()
-                                                      ..name = "未命名"
-                                                      ..price = 0);
+                                                    subCateGory.units.add(
+                                                      Unit()
+                                                        ..name = "未命名"
+                                                        ..price = 0
+                                                        ..fatherCateGoryId = fatherCateGory.id
+                                                        ..subCateGoryId = fatherCateGory.subCateGorys[index].id,
+                                                    );
                                                     merchantConfigPageController.merchantConfig.refresh();
                                                   },
                                                 ),
@@ -460,9 +466,11 @@ class MerchantConfigPage extends StatelessWidget {
                                                           builder: (_) {
                                                             return OkCancelDialogWidget(
                                                               onOk: () async {
-                                                                final subCateGory = fatherCateGory.subCateGorys[index];
-                                                                subCateGory.units.remove(e);
-                                                                merchantConfigPageController.merchantConfig.refresh();
+                                                                await merchantConfigPageController.removeUnit(
+                                                                  fatherCateGory: fatherCateGory,
+                                                                  subCateGory: fatherCateGory.subCateGorys[index],
+                                                                  unit: e,
+                                                                );
                                                               },
                                                             );
                                                           },

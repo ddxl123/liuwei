@@ -42,7 +42,7 @@ class CustomerOrder {
   double packPrice = 0;
 
   /// 取餐号
-  int pickupCode = -1;
+  int pickupCode = 0;
 
   /// 已付款金额
   double paidPrice = 0;

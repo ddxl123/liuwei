@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:isar/isar.dart';
 import 'package:liuwei/CustomerPage.dart';
 import 'package:liuwei/main.dart';
 
+import 'CustomerPageController.dart';
 import 'MerchantConfigPageController.dart';
 import 'model/Customer.dart';
 
@@ -19,7 +21,7 @@ class HomePageController extends GetxController {
   final ScrollController scrollController = ScrollController();
 
   /// 获取全部未结单的客户
-  Future<void> refreshShowCustomer() async {
+  Future<void> refreshAllShowCustomers() async {
     showCustomers.clear();
     showCustomers.addAll((await gIsar.customers.filter().closeEqualTo(false).findAll()).map((e) => e.obs).toList());
     for (var e in showCustomers) {
@@ -28,17 +30,31 @@ class HomePageController extends GetxController {
     showCustomers.refresh();
   }
 
-  /// 返回 index
-  Future<int> addCustomer() async {
-    return await gIsar.writeTxn(
+  Future<void> addCustomer() async {
+    if (isCustomerPageShowing.value) {
+      return;
+    }
+    isCustomerPageShowing.value = true;
+    final newIndex = await gIsar.writeTxn(
       () async {
-        final id = await gIsar.customers.put(Customer());
+        final id = await gIsar.customers.put(Customer()..customerOrder.pickupCode = merchantConfigPageController.merchantConfig.value!.pickupCode.nextCode);
+        merchantConfigPageController.merchantConfig.value!.pickupCode.nextCode += 1;
+        await merchantConfigPageController.refreshMerchantConfig(isTxn: false);
         final result = (await gIsar.customers.get(id))!.obs;
         showCustomers.add(result);
-        await refreshShowCustomer();
+        await refreshAllShowCustomers();
         return showCustomers.length - 1;
       },
     );
+    final orderPageController = Get.put(CustomerPageController());
+    await orderPageController.pageInit(index: newIndex);
+    await SmartDialog.show(
+      builder: (_) {
+        return CustomerPage();
+      },
+    );
+    await Get.delete<CustomerPageController>();
+    isCustomerPageShowing.value = false;
   }
 
   Future<void> deleteCustomer({required Rx<Customer> customer}) async {
@@ -46,7 +62,7 @@ class HomePageController extends GetxController {
       () async {
         await gIsar.customers.delete(customer.value.id);
         showCustomers.remove(customer);
-        await refreshShowCustomer();
+        await refreshAllShowCustomers();
       },
     );
   }
@@ -54,6 +70,6 @@ class HomePageController extends GetxController {
   /// 刷新页面
   Future<void> refreshPage() async {
     await merchantConfigPageController.refreshMerchantConfig();
-    await refreshShowCustomer();
+    await refreshAllShowCustomers();
   }
 }

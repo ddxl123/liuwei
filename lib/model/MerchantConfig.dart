@@ -68,6 +68,6 @@ class PickupCode {
   /// 下一次取餐号
   int nextCode = 1;
 
-  /// 设备码
+  /// 设备号
   int deviceCode = 0;
 }

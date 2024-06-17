@@ -24,41 +24,30 @@ class HomePage extends StatelessWidget {
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, childAspectRatio: 1.5),
           itemBuilder: (_, index) {
             if (index == 0) {
-              return Card(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: TextButton(
-                        style: const ButtonStyle(backgroundColor: WidgetStatePropertyAll(Colors.lightBlueAccent)),
-                        child: const Padding(
-                          padding: EdgeInsets.all(10),
-                          child: Text(
-                            "+添加客户",
-                            style: TextStyle(fontSize: 26),
+              return GestureDetector(
+                child: Card(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: TextButton(
+                          style: const ButtonStyle(backgroundColor: WidgetStatePropertyAll(Colors.lightBlueAccent)),
+                          child: const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: Text("+添加客户", style: TextStyle(fontSize: 26)),
                           ),
+                          onPressed: () async {
+                            await homePageController.addCustomer();
+                          },
                         ),
-                        onPressed: () async {
-                          if (homePageController.isCustomerPageShowing.value) {
-                            return;
-                          }
-                          homePageController.isCustomerPageShowing.value = true;
-                          final newIndex = await homePageController.addCustomer();
-                          final orderPageController = Get.put(CustomerPageController());
-                          orderPageController.pageInit(index: newIndex);
-                          await SmartDialog.show(
-                            builder: (_) {
-                              return CustomerPage();
-                            },
-                          );
-                          await Get.delete<CustomerPageController>();
-                          homePageController.isCustomerPageShowing.value = false;
-                        },
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                onTap: () async {
+                  await homePageController.addCustomer();
+                },
               );
             }
             return GestureDetector(
@@ -74,13 +63,14 @@ class HomePage extends StatelessWidget {
                   return;
                 }
                 homePageController.isCustomerPageShowing.value = true;
-                final orderPageController = Get.put(CustomerPageController());
-                orderPageController.pageInit(index: index - 1);
+                final customerPageController = Get.put(CustomerPageController());
+                await customerPageController.pageInit(index: index - 1);
                 await SmartDialog.show(
                   builder: (_) {
                     return CustomerPage();
                   },
                 );
+                await customerPageController.refreshCustomer();
                 await Get.delete<CustomerPageController>();
                 homePageController.isCustomerPageShowing.value = false;
               },
