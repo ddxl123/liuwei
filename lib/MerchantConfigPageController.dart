@@ -18,7 +18,7 @@ class MerchantConfigPageController extends GetxController with GetSingleTickerPr
 
   final picker = ImagePicker();
 
-  late final TabController tabController = TabController(length: 2, vsync: this);
+  late final TabController tabController = TabController(length: 3, vsync: this);
 
   final tableNumTextEditingController = TextEditingController();
 

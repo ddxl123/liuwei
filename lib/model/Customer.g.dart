@@ -17,22 +17,32 @@ const CustomerSchema = CollectionSchema(
   name: r'Customer',
   id: -7623823084711604343,
   properties: {
-    r'close': PropertySchema(
-      id: 0,
-      name: r'close',
-      type: IsarType.bool,
-    ),
     r'customerOrder': PropertySchema(
-      id: 1,
+      id: 0,
       name: r'customerOrder',
       type: IsarType.object,
       target: r'CustomerOrder',
     ),
     r'customerUnits': PropertySchema(
-      id: 2,
+      id: 1,
       name: r'customerUnits',
       type: IsarType.objectList,
       target: r'CustomerUnit',
+    ),
+    r'isClosed': PropertySchema(
+      id: 2,
+      name: r'isClosed',
+      type: IsarType.bool,
+    ),
+    r'orderTime': PropertySchema(
+      id: 3,
+      name: r'orderTime',
+      type: IsarType.dateTime,
+    ),
+    r'pickupCode': PropertySchema(
+      id: 4,
+      name: r'pickupCode',
+      type: IsarType.long,
     )
   },
   estimateSize: _customerEstimateSize,
@@ -40,7 +50,34 @@ const CustomerSchema = CollectionSchema(
   deserialize: _customerDeserialize,
   deserializeProp: _customerDeserializeProp,
   idName: r'id',
-  indexes: {},
+  indexes: {
+    r'pickupCode': IndexSchema(
+      id: -5736487545650693077,
+      name: r'pickupCode',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'pickupCode',
+          type: IndexType.value,
+          caseSensitive: false,
+        )
+      ],
+    ),
+    r'orderTime': IndexSchema(
+      id: 2995476528269330214,
+      name: r'orderTime',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'orderTime',
+          type: IndexType.value,
+          caseSensitive: false,
+        )
+      ],
+    )
+  },
   links: {},
   embeddedSchemas: {
     r'CustomerUnit': CustomerUnitSchema,
@@ -78,19 +115,21 @@ void _customerSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeBool(offsets[0], object.close);
   writer.writeObject<CustomerOrder>(
-    offsets[1],
+    offsets[0],
     allOffsets,
     CustomerOrderSchema.serialize,
     object.customerOrder,
   );
   writer.writeObjectList<CustomerUnit>(
-    offsets[2],
+    offsets[1],
     allOffsets,
     CustomerUnitSchema.serialize,
     object.customerUnits,
   );
+  writer.writeBool(offsets[2], object.isClosed);
+  writer.writeDateTime(offsets[3], object.orderTime);
+  writer.writeLong(offsets[4], object.pickupCode);
 }
 
 Customer _customerDeserialize(
@@ -100,21 +139,21 @@ Customer _customerDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = Customer();
-  object.close = reader.readBool(offsets[0]);
   object.customerOrder = reader.readObjectOrNull<CustomerOrder>(
-        offsets[1],
+        offsets[0],
         CustomerOrderSchema.deserialize,
         allOffsets,
       ) ??
       CustomerOrder();
   object.customerUnits = reader.readObjectList<CustomerUnit>(
-        offsets[2],
+        offsets[1],
         CustomerUnitSchema.deserialize,
         allOffsets,
         CustomerUnit(),
       ) ??
       [];
   object.id = id;
+  object.isClosed = reader.readBool(offsets[2]);
   return object;
 }
 
@@ -126,15 +165,13 @@ P _customerDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readBool(offset)) as P;
-    case 1:
       return (reader.readObjectOrNull<CustomerOrder>(
             offset,
             CustomerOrderSchema.deserialize,
             allOffsets,
           ) ??
           CustomerOrder()) as P;
-    case 2:
+    case 1:
       return (reader.readObjectList<CustomerUnit>(
             offset,
             CustomerUnitSchema.deserialize,
@@ -142,6 +179,12 @@ P _customerDeserializeProp<P>(
             CustomerUnit(),
           ) ??
           []) as P;
+    case 2:
+      return (reader.readBool(offset)) as P;
+    case 3:
+      return (reader.readDateTime(offset)) as P;
+    case 4:
+      return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -163,6 +206,22 @@ extension CustomerQueryWhereSort on QueryBuilder<Customer, Customer, QWhere> {
   QueryBuilder<Customer, Customer, QAfterWhere> anyId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterWhere> anyPickupCode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'pickupCode'),
+      );
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterWhere> anyOrderTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        const IndexWhereClause.any(indexName: r'orderTime'),
+      );
     });
   }
 }
@@ -232,20 +291,190 @@ extension CustomerQueryWhere on QueryBuilder<Customer, Customer, QWhereClause> {
       ));
     });
   }
-}
 
-extension CustomerQueryFilter
-    on QueryBuilder<Customer, Customer, QFilterCondition> {
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> closeEqualTo(
-      bool value) {
+  QueryBuilder<Customer, Customer, QAfterWhereClause> pickupCodeEqualTo(
+      int pickupCode) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'close',
-        value: value,
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'pickupCode',
+        value: [pickupCode],
       ));
     });
   }
 
+  QueryBuilder<Customer, Customer, QAfterWhereClause> pickupCodeNotEqualTo(
+      int pickupCode) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'pickupCode',
+              lower: [],
+              upper: [pickupCode],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'pickupCode',
+              lower: [pickupCode],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'pickupCode',
+              lower: [pickupCode],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'pickupCode',
+              lower: [],
+              upper: [pickupCode],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterWhereClause> pickupCodeGreaterThan(
+    int pickupCode, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'pickupCode',
+        lower: [pickupCode],
+        includeLower: include,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterWhereClause> pickupCodeLessThan(
+    int pickupCode, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'pickupCode',
+        lower: [],
+        upper: [pickupCode],
+        includeUpper: include,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterWhereClause> pickupCodeBetween(
+    int lowerPickupCode,
+    int upperPickupCode, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'pickupCode',
+        lower: [lowerPickupCode],
+        includeLower: includeLower,
+        upper: [upperPickupCode],
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterWhereClause> orderTimeEqualTo(
+      DateTime orderTime) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'orderTime',
+        value: [orderTime],
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterWhereClause> orderTimeNotEqualTo(
+      DateTime orderTime) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'orderTime',
+              lower: [],
+              upper: [orderTime],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'orderTime',
+              lower: [orderTime],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'orderTime',
+              lower: [orderTime],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'orderTime',
+              lower: [],
+              upper: [orderTime],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterWhereClause> orderTimeGreaterThan(
+    DateTime orderTime, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'orderTime',
+        lower: [orderTime],
+        includeLower: include,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterWhereClause> orderTimeLessThan(
+    DateTime orderTime, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'orderTime',
+        lower: [],
+        upper: [orderTime],
+        includeUpper: include,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterWhereClause> orderTimeBetween(
+    DateTime lowerOrderTime,
+    DateTime upperOrderTime, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'orderTime',
+        lower: [lowerOrderTime],
+        includeLower: includeLower,
+        upper: [upperOrderTime],
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+}
+
+extension CustomerQueryFilter
+    on QueryBuilder<Customer, Customer, QFilterCondition> {
   QueryBuilder<Customer, Customer, QAfterFilterCondition>
       customerUnitsLengthEqualTo(int length) {
     return QueryBuilder.apply(this, (query) {
@@ -386,6 +615,122 @@ extension CustomerQueryFilter
       ));
     });
   }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> isClosedEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isClosed',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimeEqualTo(
+      DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'orderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimeGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'orderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimeLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'orderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimeBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'orderTime',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> pickupCodeEqualTo(
+      int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'pickupCode',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> pickupCodeGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'pickupCode',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> pickupCodeLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'pickupCode',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> pickupCodeBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'pickupCode',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
 }
 
 extension CustomerQueryObject
@@ -409,33 +754,45 @@ extension CustomerQueryLinks
     on QueryBuilder<Customer, Customer, QFilterCondition> {}
 
 extension CustomerQuerySortBy on QueryBuilder<Customer, Customer, QSortBy> {
-  QueryBuilder<Customer, Customer, QAfterSortBy> sortByClose() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByIsClosed() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'close', Sort.asc);
+      return query.addSortBy(r'isClosed', Sort.asc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> sortByCloseDesc() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByIsClosedDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'close', Sort.desc);
+      return query.addSortBy(r'isClosed', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByOrderTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'orderTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByOrderTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'orderTime', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByPickupCode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pickupCode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByPickupCodeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pickupCode', Sort.desc);
     });
   }
 }
 
 extension CustomerQuerySortThenBy
     on QueryBuilder<Customer, Customer, QSortThenBy> {
-  QueryBuilder<Customer, Customer, QAfterSortBy> thenByClose() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'close', Sort.asc);
-    });
-  }
-
-  QueryBuilder<Customer, Customer, QAfterSortBy> thenByCloseDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'close', Sort.desc);
-    });
-  }
-
   QueryBuilder<Customer, Customer, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -447,13 +804,61 @@ extension CustomerQuerySortThenBy
       return query.addSortBy(r'id', Sort.desc);
     });
   }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByIsClosed() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isClosed', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByIsClosedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isClosed', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByOrderTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'orderTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByOrderTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'orderTime', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByPickupCode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pickupCode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByPickupCodeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pickupCode', Sort.desc);
+    });
+  }
 }
 
 extension CustomerQueryWhereDistinct
     on QueryBuilder<Customer, Customer, QDistinct> {
-  QueryBuilder<Customer, Customer, QDistinct> distinctByClose() {
+  QueryBuilder<Customer, Customer, QDistinct> distinctByIsClosed() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'close');
+      return query.addDistinctBy(r'isClosed');
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QDistinct> distinctByOrderTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'orderTime');
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QDistinct> distinctByPickupCode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'pickupCode');
     });
   }
 }
@@ -463,12 +868,6 @@ extension CustomerQueryProperty
   QueryBuilder<Customer, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
-    });
-  }
-
-  QueryBuilder<Customer, bool, QQueryOperations> closeProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'close');
     });
   }
 
@@ -483,6 +882,24 @@ extension CustomerQueryProperty
       customerUnitsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'customerUnits');
+    });
+  }
+
+  QueryBuilder<Customer, bool, QQueryOperations> isClosedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isClosed');
+    });
+  }
+
+  QueryBuilder<Customer, DateTime, QQueryOperations> orderTimeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'orderTime');
+    });
+  }
+
+  QueryBuilder<Customer, int, QQueryOperations> pickupCodeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'pickupCode');
     });
   }
 }

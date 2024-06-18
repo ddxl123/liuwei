@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:liuwei/OkCancelDialogWidget.dart';
+import 'package:liuwei/Tool.dart';
 import 'package:liuwei/model/MerchantConfig.dart';
 
 import 'MerchantConfigPageController.dart';
@@ -41,6 +42,7 @@ class MerchantConfigPage extends StatelessWidget {
                     tabs: [
                       Tab(text: "菜品配置"),
                       Tab(text: "其他配置"),
+                      Tab(text: "关于"),
                     ],
                   ),
                 ),
@@ -104,14 +106,20 @@ class MerchantConfigPage extends StatelessWidget {
                                     Text("桌号配置：  ", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                                     Text("配置结果测试 —— ", style: TextStyle(fontSize: 20, color: Colors.blue)),
                                     Obx(
-                                      () => DropdownMenu(
-                                        dropdownMenuEntries: merchantConfigPageController.merchantConfig.value!.tableNums.map(
-                                          (e) {
-                                            return DropdownMenuEntry<String>(value: e, label: e);
-                                          },
-                                        ).toList(),
-                                        initialSelection: merchantConfigPageController.merchantConfig.value!.tableNums.firstOrNull,
-                                      ),
+                                      () {
+                                        final tms = merchantConfigPageController.merchantConfig.value!.tableNums.toList();
+                                        if (tms.isEmpty) {
+                                          tms.add("未设置");
+                                        }
+                                        return DropdownMenu(
+                                          dropdownMenuEntries: tms.map(
+                                            (e) {
+                                              return DropdownMenuEntry<String>(value: e, label: e);
+                                            },
+                                          ).toList(),
+                                          initialSelection: tms.first,
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),
@@ -244,6 +252,36 @@ class MerchantConfigPage extends StatelessWidget {
                       ],
                     ),
                   ),
+                  Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text("""
+版本号：1.0.0
+
+版权声明：
+
+© [2024] [林珑] 个人版权所有。
+
+本软件产品[暂未命名]（以下简称“软件”）由林珑（以下简称“版权所有者”）开发，并受版权法保护。
+
+版权所有者授权您在遵循以下条件下使用本软件：
+
+仅供个人学习、研究之用；
+**在获得开发者明确书面授权的情况下，用于特定的商业目的。**
+您不得以任何形式或出于任何目的擅自复制、传播、出租、出售或使用本软件的全部或部分内容，除非获得版权所有者的明确许可。任何未经授权的使用均可能构成对版权所有者权利的侵犯，并将受到法律追究。
+
+对于任何违反本版权声明或相关法律的行为，版权所有者保留追究其法律责任的权利。
+
+
+如需更多信息或请求使用授权，请联系版权所有者： 1033839760@qq.com
+
+- 邮件发送形式：
+邮件主题：请求商业使用授权
+邮件内容：
+1.描述用途
+2.您的联系方式 
+
+"""),
+                  )
                 ],
               ),
             ),
@@ -491,13 +529,9 @@ class MerchantConfigPage extends StatelessWidget {
                                                       child: TextFormField(
                                                         controller: unitPriceTextEditingController,
                                                         keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
-                                                        inputFormatters: <TextInputFormatter>[
-                                                          FilteringTextInputFormatter.allow(
-                                                            RegExp(r'^-?\d*\.?\d*'),
-                                                          )
-                                                        ],
+                                                        inputFormatters: <TextInputFormatter>[Tool.nDoubleFormatter()],
                                                         onChanged: (p) async {
-                                                          e.price = double.tryParse(unitPriceTextEditingController.text) ?? -999999;
+                                                          e.price = double.tryParse(unitPriceTextEditingController.text) ?? 0;
                                                         },
                                                       ),
                                                     ),

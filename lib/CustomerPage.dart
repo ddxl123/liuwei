@@ -11,10 +11,11 @@ import 'package:liuwei/Tool.dart';
 import 'package:liuwei/model/MerchantConfig.dart';
 
 class CustomerPage extends StatelessWidget {
-  CustomerPage({super.key});
+  CustomerPage({super.key, required this.tag});
 
+  final String tag;
   final homePageController = Get.find<HomePageController>();
-  final customerPageController = Get.find<CustomerPageController>();
+  late final CustomerPageController customerPageController = Get.find<CustomerPageController>(tag: tag);
   final merchantConfigPageController = Get.find<MerchantConfigPageController>();
 
   @override
@@ -27,405 +28,591 @@ class CustomerPage extends StatelessWidget {
       ),
       child: Card(
         margin: const EdgeInsets.all(50),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(0, 20, 0, 20),
-          child: Column(
-            children: [
-              Row(
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(0, 20, 0, 20),
+              child: Column(
                 children: [
-                  SizedBox(width: 20),
-                  BackButton(
-                    style: ButtonStyle(iconSize: WidgetStatePropertyAll(30), iconColor: WidgetStatePropertyAll(Colors.red)),
-                    onPressed: () {
-                      SmartDialog.dismiss(status: SmartStatus.dialog);
-                    },
+                  Row(
+                    children: [
+                      SizedBox(width: 20),
+                      BackButton(
+                        style: ButtonStyle(iconSize: WidgetStatePropertyAll(30), iconColor: WidgetStatePropertyAll(Colors.red)),
+                        onPressed: () {
+                          SmartDialog.dismiss(status: SmartStatus.dialog);
+                        },
+                      ),
+                      Text("客户订单", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, color: Colors.deepPurple.shade300)),
+                      Spacer(),
+                      TextButton(
+                        child: Text("删除此订单", style: TextStyle(color: Colors.red)),
+                        onPressed: () {
+                          SmartDialog.show(
+                            builder: (_) {
+                              return Card(
+                                child: Padding(
+                                  padding: EdgeInsets.all(20),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            "确定永久删除次订单？",
+                                            style: TextStyle(fontSize: 24, color: Colors.red),
+                                          ),
+                                        ],
+                                      ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          SizedBox(
+                                            width: 300,
+                                            child: TextField(
+                                              controller: customerPageController.deleteCustomerTextEditingController,
+                                              decoration: InputDecoration(hintText: "在此输入数字\"1\"以确认永久删除"),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 20),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          SizedBox(width: 100),
+                                          TextButton(
+                                            child: Text(
+                                              "返回",
+                                              style: TextStyle(fontSize: 20),
+                                            ),
+                                            onPressed: () {
+                                              SmartDialog.dismiss(status: SmartStatus.dialog);
+                                            },
+                                          ),
+                                          SizedBox(width: 50),
+                                          TextButton(
+                                            child: Text("删除", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
+                                            onPressed: () async {
+                                              if (customerPageController.deleteCustomerTextEditingController.text != "1") {
+                                                SmartDialog.showToast("需要输入数字 \"1\" 以确认永久删除！");
+                                                return;
+                                              }
+                                              SmartDialog.dismiss(status: SmartStatus.dialog);
+                                              SmartDialog.dismiss(status: SmartStatus.dialog);
+                                              await homePageController.deleteCustomer(customer: customerPageController.customer);
+                                              SmartDialog.showToast("永久删除成功！");
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                      SizedBox(width: 20),
+                    ],
                   ),
-                  Text("客户订单", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, color: Colors.deepPurple.shade300)),
-                  Spacer(),
-                  TextButton(
-                    child: Text("删除此订单", style: TextStyle(color: Colors.red)),
-                    onPressed: () {
-                      SmartDialog.show(
-                        builder: (_) {
-                          return Card(
-                            child: Padding(
-                              padding: EdgeInsets.all(20),
+                  SizedBox(height: 20),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Scrollbar(
+                            controller: customerPageController.scrollController,
+                            thumbVisibility: true,
+                            child: CustomScrollView(
+                              controller: customerPageController.scrollController,
+                              slivers: [
+                                Obx(
+                                  () => customerPageController.removedUnits.isEmpty
+                                      ? SliverToBoxAdapter()
+                                      : SliverToBoxAdapter(
+                                          child: Column(
+                                            children: [
+                                              TextButton(
+                                                child: Row(
+                                                  children: [
+                                                    Obx(
+                                                      () => Icon(
+                                                        customerPageController.isHideRemovedUnits.value ? Icons.arrow_right : Icons.arrow_drop_down_sharp,
+                                                        size: 30,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      "已下单但被移除的菜品",
+                                                      style: TextStyle(
+                                                        fontSize: 24,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                onPressed: () {
+                                                  customerPageController.isHideRemovedUnits.value = !customerPageController.isHideRemovedUnits.value;
+                                                },
+                                              ),
+                                              Obx(
+                                                () => customerPageController.isHideRemovedUnits.value
+                                                    ? Container()
+                                                    : Padding(
+                                                        padding: EdgeInsets.fromLTRB(40, 10, 20, 0),
+                                                        child: Column(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: [
+                                                            Row(
+                                                              children: [
+                                                                Text(
+                                                                  "由于商家配置更新，部分菜品已被移除，以下被移除菜品已被客户下单：",
+                                                                  style: TextStyle(fontSize: 20),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            SizedBox(
+                                                              height: 200,
+                                                              child: Scrollbar(
+                                                                controller: customerPageController.removedUnitsScrollController,
+                                                                thumbVisibility: true,
+                                                                child: ListView(
+                                                                  controller: customerPageController.removedUnitsScrollController,
+                                                                  shrinkWrap: true,
+                                                                  children: customerPageController.removedUnits.map(
+                                                                    (ru) {
+                                                                      // 这里必不为 null，因为这个大类已经被展开显示了
+                                                                      final cu = customerPageController.id2CustomerUnit[ru.unitId]!;
+                                                                      return Container(
+                                                                        color: Colors.green.shade200,
+                                                                        child: Row(
+                                                                          children: [
+                                                                            Text("${ru.fatherCateGoryName}-${ru.subCateGoryName}："),
+                                                                            Expanded(
+                                                                              child: Text("${ru.price}元/${ru.name}"),
+                                                                            ),
+                                                                            SizedBox(width: 10),
+                                                                            IconButton(
+                                                                              icon: FaIcon(FontAwesomeIcons.minus, size: 18),
+                                                                              onPressed: () async {
+                                                                                await customerPageController.customerUnitSubtract(cu, removedUnit: ru);
+                                                                              },
+                                                                            ),
+                                                                            SizedBox(width: 10),
+                                                                            Text("数量"),
+                                                                            Obx(
+                                                                              () {
+                                                                                customerPageController.customer.value;
+                                                                                return Text(cu.requiredCount.toString());
+                                                                              },
+                                                                            ),
+                                                                            SizedBox(width: 10),
+                                                                            IconButton(
+                                                                              icon: FaIcon(FontAwesomeIcons.plus, size: 18),
+                                                                              onPressed: null,
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      );
+                                                                    },
+                                                                  ).toList(),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                              ),
+                                              Divider(height: 50),
+                                            ],
+                                          ),
+                                        ),
+                                ),
+                                ...customerPageController.getAllShowedFatherCateGory.map(
+                                  (e) {
+                                    return SliverToBoxAdapter(
+                                      child: Obx(
+                                        () => Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            TextButton(
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    customerPageController.hideList.contains(e.id) ? Icons.arrow_right : Icons.arrow_drop_down_sharp,
+                                                    size: 30,
+                                                  ),
+                                                  Text(
+                                                    e.name,
+                                                    style: TextStyle(
+                                                      fontSize: 24,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              onPressed: () {
+                                                if (customerPageController.hideList.contains(e.id)) {
+                                                  customerPageController.hideList.remove(e.id);
+                                                } else {
+                                                  customerPageController.hideList.add(e.id);
+                                                }
+                                              },
+                                            ),
+                                            if (!customerPageController.hideList.contains(e.id))
+                                              Padding(
+                                                padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
+                                                child: SizedBox(
+                                                  child: GridView.builder(
+                                                    shrinkWrap: true,
+                                                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 500, mainAxisExtent: 200),
+                                                    itemCount: e.subCateGorys.length,
+                                                    itemBuilder: (_, index) {
+                                                      final sub = e.subCateGorys[index];
+                                                      return SubWidget(sub: sub, tag: tag);
+                                                    },
+                                                  ),
+                                                ),
+                                              ),
+                                            Divider(height: 50),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                SliverToBoxAdapter(child: SizedBox(height: 100, child: Container())),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            VerticalDivider(width: 0),
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(10, 0, 0, 0),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Row(
-                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        "确定永久删除次订单？",
-                                        style: TextStyle(fontSize: 24, color: Colors.red),
+                                        "取餐号：${customerPageController.getCurrentPickupCode()}",
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                                       ),
+                                      SizedBox(width: 10),
                                     ],
                                   ),
                                   Row(
-                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      SizedBox(
-                                        width: 300,
-                                        child: TextField(
-                                          controller: customerPageController.deleteCustomerTextEditingController,
-                                          decoration: InputDecoration(hintText: "在此输入数字\"1\"以确认永久删除"),
-                                        ),
+                                      Text(
+                                        "桌号：",
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                                       ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 20),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      SizedBox(width: 100),
-                                      TextButton(
-                                        child: Text(
-                                          "返回",
-                                          style: TextStyle(fontSize: 20),
-                                        ),
-                                        onPressed: () {
-                                          SmartDialog.dismiss(status: SmartStatus.dialog);
-                                        },
-                                      ),
-                                      SizedBox(width: 50),
-                                      TextButton(
-                                        child: Text("删除", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
-                                        onPressed: () async {
-                                          if (customerPageController.deleteCustomerTextEditingController.text != "1") {
-                                            SmartDialog.showToast("需要输入数字 \"1\" 以确认永久删除！");
-                                            return;
+                                      Obx(
+                                        () {
+                                          final tns = merchantConfigPageController.merchantConfig.value!.tableNums.toList();
+                                          if (!tns.contains("未设置")) {
+                                            tns.add("未设置");
                                           }
-                                          SmartDialog.dismiss(status: SmartStatus.dialog);
-                                          SmartDialog.dismiss(status: SmartStatus.dialog);
-                                          await homePageController.deleteCustomer(customer: customerPageController.getCustomer);
-                                          SmartDialog.showToast("永久删除成功！");
+                                          return DropdownMenu(
+                                            controller: customerPageController.dropdownMenuTextEditingController,
+                                            initialSelection: customerPageController.customer.value.customerOrder.tableNum,
+                                            dropdownMenuEntries: tns.map(
+                                              (e) {
+                                                return DropdownMenuEntry(value: e, label: e);
+                                              },
+                                            ).toList(),
+                                            inputDecorationTheme: InputDecorationTheme(
+                                              isDense: true,
+                                              isCollapsed: true,
+                                              contentPadding: EdgeInsets.fromLTRB(10, 0, 0, 0),
+                                            ),
+                                            focusNode: customerPageController.dropdownMenuFocusNode,
+                                            onSelected: (v) async {
+                                              customerPageController.customer.value.customerOrder.tableNum = v!;
+                                              customerPageController.customer.refresh();
+                                            },
+                                          );
                                         },
                                       ),
+                                      SizedBox(width: 10),
                                     ],
                                   ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  SizedBox(width: 20),
-                ],
-              ),
-              SizedBox(height: 20),
-              Expanded(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Scrollbar(
-                        controller: customerPageController.scrollController,
-                        thumbVisibility: true,
-                        child: CustomScrollView(
-                          controller: customerPageController.scrollController,
-                          slivers: [
-                            Obx(
-                              () => customerPageController.removedUnits.isEmpty
-                                  ? SliverToBoxAdapter()
-                                  : SliverToBoxAdapter(
-                                      child: Column(
-                                        children: [
-                                          TextButton(
-                                            child: Row(
+                                  SizedBox(height: 10),
+                                  Expanded(
+                                    child: Scrollbar(
+                                      controller: customerPageController.orderScrollController,
+                                      thumbVisibility: true,
+                                      child: SingleChildScrollView(
+                                        padding: EdgeInsets.fromLTRB(0, 0, 20, 0),
+                                        controller: customerPageController.orderScrollController,
+                                        child: Obx(
+                                          () {
+                                            return Column(
+                                              mainAxisAlignment: MainAxisAlignment.start,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Obx(
-                                                  () => Icon(
-                                                    customerPageController.isHideRemovedUnits.value ? Icons.arrow_right : Icons.arrow_drop_down_sharp,
-                                                    size: 30,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  "已下单但被移除的菜品",
-                                                  style: TextStyle(
-                                                    fontSize: 24,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            onPressed: () {
-                                              customerPageController.isHideRemovedUnits.value = !customerPageController.isHideRemovedUnits.value;
-                                            },
-                                          ),
-                                          Obx(
-                                            () => customerPageController.isHideRemovedUnits.value
-                                                ? Container()
-                                                : Padding(
-                                                    padding: EdgeInsets.fromLTRB(40, 10, 20, 0),
-                                                    child: Column(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        Row(
-                                                          children: [
-                                                            Text(
-                                                              "由于商家配置更新，部分菜品已被移除，以下被移除菜品已被客户下单：",
-                                                              style: TextStyle(fontSize: 20),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        SizedBox(
-                                                          height: 200,
-                                                          child: Scrollbar(
-                                                            controller: customerPageController.removedUnitsScrollController,
-                                                            thumbVisibility: true,
-                                                            child: ListView(
-                                                              controller: customerPageController.removedUnitsScrollController,
-                                                              shrinkWrap: true,
-                                                              children: customerPageController.removedUnits.map(
-                                                                (ru) {
-                                                                  // 这里必不为 null，因为这个大类已经被展开显示了
-                                                                  final cu = customerPageController.id2CustomerUnit[ru.unitId]!;
-                                                                  return Container(
-                                                                    color: Colors.green.shade200,
-                                                                    child: Row(
-                                                                      children: [
-                                                                        Text("${ru.fatherCateGoryName}-${ru.subCateGoryName}："),
-                                                                        Expanded(
-                                                                          child: Text("${ru.price}元/${ru.name}"),
-                                                                        ),
-                                                                        SizedBox(width: 10),
-                                                                        IconButton(
-                                                                          icon: FaIcon(FontAwesomeIcons.minus, size: 18),
-                                                                          onPressed: () async {
-                                                                            await customerPageController.customerUnitSubtract(cu);
-                                                                          },
-                                                                        ),
-                                                                        SizedBox(width: 10),
-                                                                        Text("数量"),
-                                                                        Obx(
-                                                                          () {
-                                                                            customerPageController.getCustomer.value;
-                                                                            return Text(cu.requiredCount.toString());
-                                                                          },
-                                                                        ),
-                                                                        SizedBox(width: 10),
-                                                                        IconButton(
-                                                                          icon: FaIcon(FontAwesomeIcons.plus, size: 18),
-                                                                          onPressed: () async {
-                                                                            await customerPageController.customerUnitPlus(unit: null, customerUnit: cu);
-                                                                          },
-                                                                        ),
-                                                                      ],
-                                                                    ),
-                                                                  );
-                                                                },
-                                                              ).toList(),
-                                                            ),
+                                                ...customerPageController.id2CustomerUnit.values.map(
+                                                  (cu) {
+                                                    final u = customerPageController.id2Unit[cu.unitId];
+                                                    if (u == null) {
+                                                      return Container();
+                                                    }
+                                                    return Container(
+                                                      child: Column(
+                                                        mainAxisAlignment: MainAxisAlignment.start,
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Row(
+                                                            mainAxisAlignment: MainAxisAlignment.start,
+                                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              // 既然 Unit 不为 null，则其所在的 FatherCategory 和 SubCategory 必然存在
+                                                              Container(
+                                                                constraints: BoxConstraints(maxWidth: 150),
+                                                                child: Text(
+                                                                  "${customerPageController.id2FatherCategory[u.fatherCateGoryId]!.name} "
+                                                                  "${customerPageController.id2SubCategory[u.subCateGoryId]!.name}",
+                                                                  softWrap: true,
+                                                                ),
+                                                              ),
+                                                              Text("   × ${cu.requiredCount} ${u.name} ￥${(u.price * cu.requiredCount).toStringAsFixed(2)}"),
+                                                            ],
                                                           ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                          ),
-                                          Divider(height: 50),
-                                        ],
-                                      ),
-                                    ),
-                            ),
-                            ...customerPageController.getAllShowedFatherCateGory.map(
-                              (e) {
-                                return SliverToBoxAdapter(
-                                  child: Obx(
-                                    () => Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        TextButton(
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                customerPageController.hideList.contains(e.id) ? Icons.arrow_right : Icons.arrow_drop_down_sharp,
-                                                size: 30,
-                                              ),
-                                              Text(
-                                                e.name,
-                                                style: TextStyle(
-                                                  fontSize: 24,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          onPressed: () {
-                                            if (customerPageController.hideList.contains(e.id)) {
-                                              customerPageController.hideList.remove(e.id);
-                                            } else {
-                                              customerPageController.hideList.add(e.id);
-                                            }
+                                                        ],
+                                                      ),
+                                                      padding: EdgeInsets.fromLTRB(0, 10, 0, 10),
+                                                      decoration: BoxDecoration(
+                                                        border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2))),
+                                                      ),
+                                                    );
+                                                  },
+                                                ).toList(),
+                                                ...customerPageController.removedUnits.map(
+                                                  (ru) {
+                                                    final cu = customerPageController.id2CustomerUnit[ru.unitId];
+                                                    if (cu == null) {
+                                                      return Container();
+                                                    }
+                                                    return Container(
+                                                      child: Column(
+                                                        mainAxisAlignment: MainAxisAlignment.start,
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Row(
+                                                            mainAxisAlignment: MainAxisAlignment.start,
+                                                            crossAxisAlignment: CrossAxisAlignment.center,
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              // 既然 Unit 不为 null，则其所在的 FatherCategory 和 SubCategory 必然存在
+                                                              Container(
+                                                                constraints: BoxConstraints(maxWidth: 150),
+                                                                child: Text(
+                                                                  "${ru.fatherCateGoryName} "
+                                                                  "${ru.subCateGoryName}",
+                                                                  softWrap: true,
+                                                                ),
+                                                              ),
+                                                              Text("   × ${cu.requiredCount} ${ru.name} ￥${(ru.price * cu.requiredCount).toStringAsFixed(2)}"),
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      padding: EdgeInsets.fromLTRB(0, 10, 0, 10),
+                                                      decoration: BoxDecoration(
+                                                        border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2))),
+                                                      ),
+                                                    );
+                                                  },
+                                                ).toList(),
+                                                SizedBox(height: 20),
+                                                Text("订单创建时间：", style: TextStyle(fontWeight: FontWeight.bold)),
+                                                Text(customerPageController.customer.value.customerOrder.orderTime.removeMill),
+                                              ],
+                                            );
                                           },
                                         ),
-                                        if (!customerPageController.hideList.contains(e.id))
-                                          Padding(
-                                            padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
-                                            child: SizedBox(
-                                              child: GridView.builder(
-                                                shrinkWrap: true,
-                                                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 500, mainAxisExtent: 200),
-                                                itemCount: e.subCateGorys.length,
-                                                itemBuilder: (_, index) {
-                                                  final sub = e.subCateGorys[index];
-                                                  return SubWidget(sub: sub);
-                                                },
-                                              ),
-                                            ),
-                                          ),
-                                        Divider(height: 50),
-                                      ],
+                                      ),
                                     ),
                                   ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        VerticalDivider(width: 0),
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(10, 0, 0, 0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    "取餐号：${customerPageController.getCurrentPickupCode()}",
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                                  ),
-                                  SizedBox(width: 10),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Text(
-                                    "桌号：",
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                                  ),
-                                  DropdownMenu(
-                                    initialSelection: customerPageController.getCustomer.value.customerOrder.tableNum,
-                                    dropdownMenuEntries: merchantConfigPageController.merchantConfig.value!.tableNums.map(
-                                      (e) {
-                                        return DropdownMenuEntry(value: e, label: e);
-                                      },
-                                    ).toList(),
-                                    inputDecorationTheme: InputDecorationTheme(
-                                      isDense: true,
-                                      isCollapsed: true,
-                                      contentPadding: EdgeInsets.fromLTRB(10, 0, 0, 0),
-                                    ),
-                                    onSelected: (v) async {
-                                      customerPageController.getCustomer.value.customerOrder.tableNum = v!;
-                                      customerPageController.getCustomer.refresh();
-                                    },
-                                  ),
-                                  SizedBox(width: 10),
-                                ],
-                              ),
-                              SizedBox(height: 10),
-                              Expanded(
-                                child: Scrollbar(
-                                  controller: customerPageController.orderScrollController,
-                                  thumbVisibility: true,
-                                  child: SingleChildScrollView(
-                                    padding: EdgeInsets.fromLTRB(0, 0, 20, 0),
-                                    controller: customerPageController.orderScrollController,
+                                  SizedBox(height: 10),
+                                  Padding(
+                                    padding: EdgeInsets.fromLTRB(0, 0, 10, 0),
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.start,
                                       crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        ...customerPageController.id2CustomerUnit.values.map(
-                                          (cu) {
-                                            final u = customerPageController.id2Unit[cu.unitId];
-                                            if (u == null) {
-                                              return Container();
-                                            }
-                                            return Container(
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.start,
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Row(
-                                                    mainAxisAlignment: MainAxisAlignment.start,
-                                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      // 既然 Unit 不为 null，则其所在的 FatherCategory 和 SubCategory 必然存在
-                                                      Container(
-                                                        constraints: BoxConstraints(maxWidth: 150),
-                                                        child: Text(
-                                                          "${customerPageController.id2FatherCategory[u.fatherCateGoryId]!.name} "
-                                                          "${customerPageController.id2SubCategory[u.subCateGoryId]!.name}",
-                                                          softWrap: true,
+                                        Row(
+                                          children: [
+                                            Text("包装费："),
+                                            SizedBox(
+                                              width: 100,
+                                              child: TextField(
+                                                decoration: InputDecoration(prefix: Text("￥")),
+                                                controller: customerPageController.packPriceTextEditingController,
+                                                onChanged: (v) {
+                                                  customerPageController.customer.value.customerOrder.packPrice = double.tryParse(v) ?? 0;
+                                                  customerPageController.customer.refresh();
+                                                },
+                                                inputFormatters: [Tool.nDoubleFormatter()],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 10),
+                                        Obx(
+                                          () => Text(
+                                            "应付款：￥${customerPageController.calRequiredPrice()}",
+                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                                          ),
+                                        ),
+                                        SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              "已付款：￥${customerPageController.customer.value.customerOrder.paidPrice}",
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                                            ),
+                                            Obx(
+                                              () {
+                                                if (customerPageController.priceStatus == PriceStatus.clear) {
+                                                  return Text(
+                                                    "（已结清）",
+                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.grey),
+                                                  );
+                                                }
+                                                if (customerPageController.priceStatus == PriceStatus.customerOverpaid) {
+                                                  return Text(
+                                                    "（超额支付）",
+                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.yellow),
+                                                  );
+                                                }
+
+                                                return Text(
+                                                  "（未结清）",
+                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.red),
+                                                );
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 10),
+                                        Row(
+                                          children: [
+                                            SizedBox(
+                                              width: 100,
+                                              child: TextField(
+                                                decoration: InputDecoration(hintText: "指定金额", prefix: Text("￥")),
+                                                inputFormatters: [Tool.nDoubleFormatter()],
+                                              ),
+                                            ),
+                                            SizedBox(width: 10),
+                                            Padding(
+                                              padding: EdgeInsets.fromLTRB(0, 0, 10, 10),
+                                              child: ElevatedButton(
+                                                child: Text(
+                                                  "结  算",
+                                                  style: TextStyle(color: Colors.blueGrey),
+                                                ),
+                                                style: ButtonStyle(
+                                                  backgroundColor: WidgetStatePropertyAll(Colors.greenAccent),
+                                                  fixedSize: WidgetStatePropertyAll(Size(100, 50)),
+                                                  textStyle: WidgetStatePropertyAll(
+                                                    TextStyle(fontSize: 20),
+                                                  ),
+                                                ),
+                                                onPressed: () {},
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: EdgeInsets.fromLTRB(0, 0, 10, 10),
+                                              child: Obx(
+                                                () {
+                                                  if(customerPageController.customer.value.isClosed){
+                                                    return ElevatedButton(
+                                                      child: Text(
+                                                        "已结单",
+                                                        style: TextStyle(color: Colors.white),
+                                                      ),
+                                                      style: ButtonStyle(
+                                                        backgroundColor: WidgetStatePropertyAll(Colors.grey),
+                                                        fixedSize: WidgetStatePropertyAll(Size(100, 50)),
+                                                        textStyle: WidgetStatePropertyAll(
+                                                          TextStyle(fontSize: 16),
                                                         ),
                                                       ),
-                                                      Text("   × ${cu.requiredCount} ${u.name} ￥${u.price * cu.requiredCount}"),
-                                                    ],
-                                                  ),
-                                                ],
+                                                      onPressed: () async {
+                                                        await customerPageController.orderCloseChange();
+                                                      },
+                                                    );
+                                                  }
+                                                  return ElevatedButton(
+                                                    child: Text(
+                                                      "结 单",
+                                                      style: TextStyle(color: Colors.white),
+                                                    ),
+                                                    style: ButtonStyle(
+                                                      backgroundColor: WidgetStatePropertyAll(Colors.redAccent),
+                                                      fixedSize: WidgetStatePropertyAll(Size(100, 50)),
+                                                      textStyle: WidgetStatePropertyAll(
+                                                        TextStyle(fontSize: 20),
+                                                      ),
+                                                    ),
+                                                    onPressed: () async {
+                                                      await customerPageController.orderCloseChange();
+                                                    },
+                                                  );
+                                                },
                                               ),
-                                              padding: EdgeInsets.fromLTRB(0, 10, 0, 10),
-                                              decoration: BoxDecoration(
-                                                border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2))),
-                                              ),
-                                            );
-                                          },
-                                        ).toList(),
-                                        SizedBox(height: 20),
-                                        Text("订单创建时间：", style: TextStyle(fontWeight: FontWeight.bold)),
-                                        Text(customerPageController.getCustomer.value.customerOrder.orderTime.removeMill),
+                                            ),
+                                          ],
+                                        ),
                                       ],
                                     ),
                                   ),
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text("包装费："),
-                                      SizedBox(width: 100, child: TextField(decoration: InputDecoration(prefix: Text("￥")))),
-                                    ],
-                                  ),
-                                  Text(
-                                    "应付款：￥",
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-                                  ),
-                                  Text(
-                                    "已付款：￥${customerPageController.getCustomer.value.customerOrder.paidPrice}",
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-                                  ),
                                 ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            Positioned(
+              bottom: 10,
+              child: ElevatedButton(
+                style: ButtonStyle(
+                  backgroundColor: WidgetStatePropertyAll(Colors.deepPurpleAccent.withOpacity(0.5)),
+                  fixedSize: WidgetStatePropertyAll(Size(150, 50)),
+                ),
+                child: Text(
+                  "保存并返回",
+                  style: TextStyle(color: Colors.white, fontSize: 20),
+                ),
+                onPressed: () {
+                  SmartDialog.dismiss(status: SmartStatus.dialog);
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -433,8 +620,9 @@ class CustomerPage extends StatelessWidget {
 }
 
 class SubWidget extends StatefulWidget {
-  const SubWidget({super.key, required this.sub});
+  const SubWidget({super.key, required this.sub, required this.tag});
 
+  final String tag;
   final SubCateGory sub;
 
   @override
@@ -442,7 +630,8 @@ class SubWidget extends StatefulWidget {
 }
 
 class _SubWidgetState extends State<SubWidget> {
-  final customerPageController = Get.find<CustomerPageController>();
+  late final CustomerPageController customerPageController = Get.find<CustomerPageController>(tag: widget.tag);
+
   final scrollController = ScrollController();
 
   @override
@@ -482,7 +671,7 @@ class _SubWidgetState extends State<SubWidget> {
                           (subE) {
                             return Obx(
                               () {
-                                customerPageController.getCustomer.value;
+                                customerPageController.customer.value;
                                 return Container(
                                   color: (customerPageController.getCustomerUnitByUnit(subE)?.requiredCount ?? 0) > 0 ? Colors.green.shade200 : null,
                                   child: Row(
@@ -497,15 +686,13 @@ class _SubWidgetState extends State<SubWidget> {
                                           customerPageController.customerUnitSubtract(customerPageController.getCustomerUnitByUnit(subE));
                                         },
                                       ),
-                                      SizedBox(width: 10),
                                       Text("数量"),
                                       Obx(
                                         () {
-                                          customerPageController.getCustomer.value;
+                                          customerPageController.customer.value;
                                           return Text(customerPageController.getCustomerUnitByUnit(subE)?.requiredCount.toString() ?? "0");
                                         },
                                       ),
-                                      SizedBox(width: 10),
                                       IconButton(
                                         icon: FaIcon(FontAwesomeIcons.plus, size: 18),
                                         onPressed: () {

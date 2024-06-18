@@ -10,7 +10,13 @@ class Customer {
   CustomerOrder customerOrder = CustomerOrder();
 
   /// 是否已结单
-  bool close = false;
+  bool isClosed = false;
+
+  @Index(type: IndexType.value)
+  int get pickupCode => customerOrder.pickupCode;
+
+  @Index(type: IndexType.value)
+  DateTime get orderTime => customerOrder.orderTime;
 }
 
 /// 单个客户单个菜品
@@ -36,7 +42,7 @@ class CustomerOrder {
   DateTime orderTime = DateTime.now();
 
   /// 桌号
-  String tableNum = "-";
+  String tableNum = "未设置";
 
   /// 包装费
   double packPrice = 0;
