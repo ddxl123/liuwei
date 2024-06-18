@@ -10,6 +10,9 @@ class MerchantConfig {
   List<FatherCateGory> fatherCateGorys = [];
   List<String> tableNums = [];
   PickupCode pickupCode = PickupCode();
+  bool isShowImage = true;
+  bool isShowTableNum = true;
+  bool isShowPickupCode = true;
 }
 
 /// 大类

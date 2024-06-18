@@ -69,43 +69,47 @@ class HomePage extends StatelessWidget {
                 controller: homePageController.scrollController,
                 slivers: [
                   Obx(
-                    () => SliverGrid(
-                      delegate: SliverChildListDelegate(
-                        [
-                          GestureDetector(
-                            child: Card(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(10),
-                                    child: TextButton(
-                                      style: const ButtonStyle(backgroundColor: WidgetStatePropertyAll(Colors.lightBlueAccent)),
-                                      child: const Padding(
-                                        padding: EdgeInsets.all(10),
-                                        child: Text("+ 添加客户", style: TextStyle(fontSize: 26)),
+                    () {
+                      return SliverGrid(
+                        delegate: SliverChildListDelegate(
+                          [
+                            GestureDetector(
+                              child: Card(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(10),
+                                      child: TextButton(
+                                        style: const ButtonStyle(backgroundColor: WidgetStatePropertyAll(Colors.lightBlueAccent)),
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(10),
+                                          child: Text("+ 添加客户", style: TextStyle(fontSize: 26)),
+                                        ),
+                                        onPressed: () async {
+                                          await homePageController.addCustomer();
+                                        },
                                       ),
-                                      onPressed: () async {
-                                        await homePageController.addCustomer();
-                                      },
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
+                              onTap: () async {
+                                await homePageController.addCustomer();
+                              },
                             ),
-                            onTap: () async {
-                              await homePageController.addCustomer();
-                            },
-                          ),
-                          ...homePageController.showCustomers.map(
-                            (e) {
-                              return CustomerWidget(tag: e.value.id.toString(), customer: e);
-                            },
-                          ),
-                        ],
-                      ),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, childAspectRatio: 1.5),
-                    ),
+                            ...homePageController.showCustomers.map(
+                              (e) {
+                                return Obx(
+                                  () => CustomerWidget(tag: e.value.id.toString(), customer: e),
+                                );
+                              },
+                            ).toList(),
+                          ],
+                        ),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, childAspectRatio: 1.5),
+                      );
+                    },
                   ),
                   SliverToBoxAdapter(
                     child: Center(

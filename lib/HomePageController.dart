@@ -108,12 +108,16 @@ class HomePageController extends GetxController {
     isCustomerAdding.value = false;
   }
 
+  /// TODO: 删除失败问题
   Future<void> deleteCustomer({required Rx<Customer> customer}) async {
     await gIsar.writeTxn(
       () async {
         await gIsar.customers.delete(customer.value.id);
-        showCustomers.remove(customer);
+        print(showCustomers.remove(customer.value));
+        showCustomers.refresh();
         await refreshAllShowCustomers();
+        print(showCustomers.length);
+        showCustomers.refresh();
       },
     );
   }
