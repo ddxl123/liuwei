@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:liuwei/HomePageController.dart';
 import 'package:liuwei/Tool.dart';
@@ -158,17 +159,23 @@ class CustomerWidget extends StatelessWidget {
               Row(
                 children: [
                   Obx(
-                    () => Text(
-                      "取餐号：${customerPageController.getCurrentPickupCode()}",
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
+                    () {
+                      if (customerPageController.getCurrentPickupCode() == null) return Container();
+                      return Text(
+                        "取餐号：${customerPageController.getCurrentPickupCode()}",
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      );
+                    },
                   ),
                   Spacer(),
                   Obx(
-                    () => Text(
-                      "桌号：${customerPageController.customer.value.customerOrder.tableNum}",
-                      style: TextStyle(fontSize: 20),
-                    ),
+                    () {
+                      if (customerPageController.merchantConfigPageController.merchantConfig.value!.tableNums == null) return Container();
+                      return Text(
+                        "桌号：${customerPageController.customer.value.customerOrder.tableNum}",
+                        style: TextStyle(fontSize: 20),
+                      );
+                    },
                   ),
                   SizedBox(width: 10),
                 ],

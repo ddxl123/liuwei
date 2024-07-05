@@ -97,8 +97,9 @@ class HomePageController extends GetxController {
     isCustomerAdding.value = true;
     await gIsar.writeTxn(
       () async {
-        final id = await gIsar.customers.put(Customer()..customerOrder.pickupCode = merchantConfigPageController.merchantConfig.value!.pickupCode.nextCode);
-        merchantConfigPageController.merchantConfig.value!.pickupCode.nextCode += 1;
+        final id =
+            await gIsar.customers.put(Customer()..customerOrder.pickupCode = merchantConfigPageController.merchantConfig.value!.pickupCode?.nextCode ?? 0);
+        merchantConfigPageController.merchantConfig.value!.pickupCode?.nextCode += 1;
         await merchantConfigPageController.refreshMerchantConfig(isTxn: false);
         final result = (await gIsar.customers.get(id))!.obs;
         showCustomers.add(result);

@@ -135,7 +135,7 @@ class CustomerPageController extends GetxController {
     packPriceTextEditingController.text = customer.value.customerOrder.packPrice.toString();
 
     if (isPop) {
-      SmartDialog.show(
+     await SmartDialog.show(
         builder: (_) {
           return CustomerPage(tag: customer.value.id.toString());
         },
@@ -143,13 +143,13 @@ class CustomerPageController extends GetxController {
           await pageClose();
         },
       );
+     SmartDialog.showToast("已保存！");
     }
   }
 
   Future<void> pageClose() async {
     await refreshAndWriteCustomer();
     await homePageController.refreshAllShowCustomers();
-    print("pageClose");
   }
 
   CustomerUnit? getCustomerUnitByUnit(Unit unit) => id2CustomerUnit[unit.id];
@@ -227,9 +227,11 @@ class CustomerPageController extends GetxController {
   }
 
   /// 获取当前订单取餐号
-  String getCurrentPickupCode() {
-    final String pre =
-        merchantConfigPageController.merchantConfig.value!.pickupCode.deviceCode == 0 ? "" : "${merchantConfigPageController.merchantConfig.value!.pickupCode.deviceCode}-";
+  String? getCurrentPickupCode() {
+    if (merchantConfigPageController.merchantConfig.value!.pickupCode == null) return null;
+    final String pre = merchantConfigPageController.merchantConfig.value!.pickupCode!.deviceCode == 0
+        ? ""
+        : "${merchantConfigPageController.merchantConfig.value!.pickupCode!.deviceCode}-";
     return "$pre${customer.value.customerOrder.pickupCode}";
   }
 

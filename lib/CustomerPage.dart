@@ -47,7 +47,7 @@ class CustomerPage extends StatelessWidget {
                       Text("客户订单", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, color: Colors.deepPurple.shade300)),
                       Spacer(),
                       TextButton(
-                        child: Text("删除此订单", style: TextStyle(color: Colors.red)),
+                        child: Text("设为无效订单", style: TextStyle(color: Colors.blue,decoration: TextDecoration.underline)),
                         onPressed: () {
                           SmartDialog.show(
                             builder: (_) {
@@ -304,50 +304,60 @@ class CustomerPage extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "取餐号：${customerPageController.getCurrentPickupCode()}",
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                                      ),
-                                      SizedBox(width: 10),
-                                    ],
+                                  Obx(
+                                    () {
+                                      if (customerPageController.getCurrentPickupCode() == null) return Container();
+                                      return Row(
+                                        children: [
+                                          Text(
+                                            "取餐号：${customerPageController.getCurrentPickupCode()}",
+                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                                          ),
+                                          SizedBox(width: 10),
+                                        ],
+                                      );
+                                    },
                                   ),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "桌号：",
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                                      ),
-                                      Obx(
-                                        () {
-                                          final tns = merchantConfigPageController.merchantConfig.value!.tableNums.toList();
-                                          if (!tns.contains("未设置")) {
-                                            tns.add("未设置");
-                                          }
-                                          return DropdownMenu(
-                                            controller: customerPageController.dropdownMenuTextEditingController,
-                                            initialSelection: customerPageController.customer.value.customerOrder.tableNum,
-                                            dropdownMenuEntries: tns.map(
-                                              (e) {
-                                                return DropdownMenuEntry(value: e, label: e);
-                                              },
-                                            ).toList(),
-                                            inputDecorationTheme: InputDecorationTheme(
-                                              isDense: true,
-                                              isCollapsed: true,
-                                              contentPadding: EdgeInsets.fromLTRB(10, 0, 0, 0),
-                                            ),
-                                            focusNode: customerPageController.dropdownMenuFocusNode,
-                                            onSelected: (v) async {
-                                              customerPageController.customer.value.customerOrder.tableNum = v!;
-                                              customerPageController.customer.refresh();
+                                  Obx(
+                                    () {
+                                      if (merchantConfigPageController.merchantConfig.value!.tableNums == null) return Container();
+                                      return Row(
+                                        children: [
+                                          Text(
+                                            "桌号：",
+                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                                          ),
+                                          Obx(
+                                            () {
+                                              final tns = merchantConfigPageController.merchantConfig.value!.tableNums!.toList();
+                                              if (!tns.contains("未设置")) {
+                                                tns.add("未设置");
+                                              }
+                                              return DropdownMenu(
+                                                controller: customerPageController.dropdownMenuTextEditingController,
+                                                initialSelection: customerPageController.customer.value.customerOrder.tableNum,
+                                                dropdownMenuEntries: tns.map(
+                                                  (e) {
+                                                    return DropdownMenuEntry(value: e, label: e);
+                                                  },
+                                                ).toList(),
+                                                inputDecorationTheme: InputDecorationTheme(
+                                                  isDense: true,
+                                                  isCollapsed: true,
+                                                  contentPadding: EdgeInsets.fromLTRB(10, 0, 0, 0),
+                                                ),
+                                                focusNode: customerPageController.dropdownMenuFocusNode,
+                                                onSelected: (v) async {
+                                                  customerPageController.customer.value.customerOrder.tableNum = v!;
+                                                  customerPageController.customer.refresh();
+                                                },
+                                              );
                                             },
-                                          );
-                                        },
-                                      ),
-                                      SizedBox(width: 10),
-                                    ],
+                                          ),
+                                          SizedBox(width: 10),
+                                        ],
+                                      );
+                                    },
                                   ),
                                   SizedBox(height: 10),
                                   Expanded(
@@ -543,7 +553,7 @@ class CustomerPage extends StatelessWidget {
                                               padding: EdgeInsets.fromLTRB(0, 0, 10, 10),
                                               child: Obx(
                                                 () {
-                                                  if(customerPageController.customer.value.isClosed){
+                                                  if (customerPageController.customer.value.isClosed) {
                                                     return ElevatedButton(
                                                       child: Text(
                                                         "已结单",
@@ -646,7 +656,14 @@ class _SubWidgetState extends State<SubWidget> {
       elevation: 4,
       child: Row(
         children: [
-          widget.sub.imagePath == null ? const Placeholder(fallbackHeight: 200, fallbackWidth: 9 * 200 / 16) : Image.file(File(widget.sub.imagePath!), width: 9 * 200 / 16),
+          Obx(
+            () {
+              if (!customerPageController.merchantConfigPageController.merchantConfig.value!.isShowImage) return Container();
+              return widget.sub.imagePath == null
+                  ? const Placeholder(fallbackHeight: 200, fallbackWidth: 9 * 200 / 16)
+                  : Image.file(File(widget.sub.imagePath!), width: 9 * 200 / 16);
+            },
+          ),
           Expanded(
             child: Padding(
               padding: EdgeInsets.all(10),

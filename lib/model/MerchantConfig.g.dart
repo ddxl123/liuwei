@@ -23,14 +23,19 @@ const MerchantConfigSchema = CollectionSchema(
       type: IsarType.objectList,
       target: r'FatherCateGory',
     ),
-    r'pickupCode': PropertySchema(
+    r'isShowImage': PropertySchema(
       id: 1,
+      name: r'isShowImage',
+      type: IsarType.bool,
+    ),
+    r'pickupCode': PropertySchema(
+      id: 2,
       name: r'pickupCode',
       type: IsarType.object,
       target: r'PickupCode',
     ),
     r'tableNums': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'tableNums',
       type: IsarType.stringList,
     )
@@ -69,14 +74,24 @@ int _merchantConfigEstimateSize(
           FatherCateGorySchema.estimateSize(value, offsets, allOffsets);
     }
   }
-  bytesCount += 3 +
-      PickupCodeSchema.estimateSize(
-          object.pickupCode, allOffsets[PickupCode]!, allOffsets);
-  bytesCount += 3 + object.tableNums.length * 3;
   {
-    for (var i = 0; i < object.tableNums.length; i++) {
-      final value = object.tableNums[i];
-      bytesCount += value.length * 3;
+    final value = object.pickupCode;
+    if (value != null) {
+      bytesCount += 3 +
+          PickupCodeSchema.estimateSize(
+              value, allOffsets[PickupCode]!, allOffsets);
+    }
+  }
+  {
+    final list = object.tableNums;
+    if (list != null) {
+      bytesCount += 3 + list.length * 3;
+      {
+        for (var i = 0; i < list.length; i++) {
+          final value = list[i];
+          bytesCount += value.length * 3;
+        }
+      }
     }
   }
   return bytesCount;
@@ -94,13 +109,14 @@ void _merchantConfigSerialize(
     FatherCateGorySchema.serialize,
     object.fatherCateGorys,
   );
+  writer.writeBool(offsets[1], object.isShowImage);
   writer.writeObject<PickupCode>(
-    offsets[1],
+    offsets[2],
     allOffsets,
     PickupCodeSchema.serialize,
     object.pickupCode,
   );
-  writer.writeStringList(offsets[2], object.tableNums);
+  writer.writeStringList(offsets[3], object.tableNums);
 }
 
 MerchantConfig _merchantConfigDeserialize(
@@ -118,13 +134,13 @@ MerchantConfig _merchantConfigDeserialize(
       ) ??
       [];
   object.id = id;
+  object.isShowImage = reader.readBool(offsets[1]);
   object.pickupCode = reader.readObjectOrNull<PickupCode>(
-        offsets[1],
-        PickupCodeSchema.deserialize,
-        allOffsets,
-      ) ??
-      PickupCode();
-  object.tableNums = reader.readStringList(offsets[2]) ?? [];
+    offsets[2],
+    PickupCodeSchema.deserialize,
+    allOffsets,
+  );
+  object.tableNums = reader.readStringList(offsets[3]);
   return object;
 }
 
@@ -144,14 +160,15 @@ P _merchantConfigDeserializeProp<P>(
           ) ??
           []) as P;
     case 1:
-      return (reader.readObjectOrNull<PickupCode>(
-            offset,
-            PickupCodeSchema.deserialize,
-            allOffsets,
-          ) ??
-          PickupCode()) as P;
+      return (reader.readBool(offset)) as P;
     case 2:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readObjectOrNull<PickupCode>(
+        offset,
+        PickupCodeSchema.deserialize,
+        allOffsets,
+      )) as P;
+    case 3:
+      return (reader.readStringList(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -393,6 +410,52 @@ extension MerchantConfigQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      isShowImageEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isShowImage',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      pickupCodeIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'pickupCode',
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      pickupCodeIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'pickupCode',
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      tableNumsIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'tableNums',
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      tableNumsIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'tableNums',
       ));
     });
   }
@@ -644,7 +707,21 @@ extension MerchantConfigQueryLinks
     on QueryBuilder<MerchantConfig, MerchantConfig, QFilterCondition> {}
 
 extension MerchantConfigQuerySortBy
-    on QueryBuilder<MerchantConfig, MerchantConfig, QSortBy> {}
+    on QueryBuilder<MerchantConfig, MerchantConfig, QSortBy> {
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterSortBy>
+      sortByIsShowImage() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShowImage', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterSortBy>
+      sortByIsShowImageDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShowImage', Sort.desc);
+    });
+  }
+}
 
 extension MerchantConfigQuerySortThenBy
     on QueryBuilder<MerchantConfig, MerchantConfig, QSortThenBy> {
@@ -659,10 +736,31 @@ extension MerchantConfigQuerySortThenBy
       return query.addSortBy(r'id', Sort.desc);
     });
   }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterSortBy>
+      thenByIsShowImage() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShowImage', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterSortBy>
+      thenByIsShowImageDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShowImage', Sort.desc);
+    });
+  }
 }
 
 extension MerchantConfigQueryWhereDistinct
     on QueryBuilder<MerchantConfig, MerchantConfig, QDistinct> {
+  QueryBuilder<MerchantConfig, MerchantConfig, QDistinct>
+      distinctByIsShowImage() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isShowImage');
+    });
+  }
+
   QueryBuilder<MerchantConfig, MerchantConfig, QDistinct>
       distinctByTableNums() {
     return QueryBuilder.apply(this, (query) {
@@ -686,14 +784,20 @@ extension MerchantConfigQueryProperty
     });
   }
 
-  QueryBuilder<MerchantConfig, PickupCode, QQueryOperations>
+  QueryBuilder<MerchantConfig, bool, QQueryOperations> isShowImageProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isShowImage');
+    });
+  }
+
+  QueryBuilder<MerchantConfig, PickupCode?, QQueryOperations>
       pickupCodeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'pickupCode');
     });
   }
 
-  QueryBuilder<MerchantConfig, List<String>, QQueryOperations>
+  QueryBuilder<MerchantConfig, List<String>?, QQueryOperations>
       tableNumsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'tableNums');

@@ -8,11 +8,12 @@ part 'MerchantConfig.g.dart';
 class MerchantConfig {
   Id id = Isar.autoIncrement;
   List<FatherCateGory> fatherCateGorys = [];
-  List<String> tableNums = [];
-  PickupCode pickupCode = PickupCode();
+  /// 如果为 null，则未启用桌号
+  List<String>? tableNums = [];
+  /// 如果为 null，则未启用取餐码
+  PickupCode? pickupCode = PickupCode();
+  /// 是否启用图片
   bool isShowImage = true;
-  bool isShowTableNum = true;
-  bool isShowPickupCode = true;
 }
 
 /// 大类

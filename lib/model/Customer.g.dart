@@ -29,9 +29,9 @@ const CustomerSchema = CollectionSchema(
       type: IsarType.objectList,
       target: r'CustomerUnit',
     ),
-    r'isClosed': PropertySchema(
+    r'isCompleted': PropertySchema(
       id: 2,
-      name: r'isClosed',
+      name: r'isCompleted',
       type: IsarType.bool,
     ),
     r'orderTime': PropertySchema(
@@ -39,8 +39,13 @@ const CustomerSchema = CollectionSchema(
       name: r'orderTime',
       type: IsarType.dateTime,
     ),
-    r'pickupCode': PropertySchema(
+    r'orderTimes': PropertySchema(
       id: 4,
+      name: r'orderTimes',
+      type: IsarType.long,
+    ),
+    r'pickupCode': PropertySchema(
+      id: 5,
       name: r'pickupCode',
       type: IsarType.long,
     )
@@ -81,6 +86,7 @@ const CustomerSchema = CollectionSchema(
   links: {},
   embeddedSchemas: {
     r'CustomerUnit': CustomerUnitSchema,
+    r'Times2Count': Times2CountSchema,
     r'CustomerOrder': CustomerOrderSchema
   },
   getId: _customerGetId,
@@ -127,9 +133,10 @@ void _customerSerialize(
     CustomerUnitSchema.serialize,
     object.customerUnits,
   );
-  writer.writeBool(offsets[2], object.isClosed);
+  writer.writeBool(offsets[2], object.isCompleted);
   writer.writeDateTime(offsets[3], object.orderTime);
-  writer.writeLong(offsets[4], object.pickupCode);
+  writer.writeLong(offsets[4], object.orderTimes);
+  writer.writeLong(offsets[5], object.pickupCode);
 }
 
 Customer _customerDeserialize(
@@ -153,7 +160,8 @@ Customer _customerDeserialize(
       ) ??
       [];
   object.id = id;
-  object.isClosed = reader.readBool(offsets[2]);
+  object.isCompleted = reader.readBool(offsets[2]);
+  object.orderTimes = reader.readLong(offsets[4]);
   return object;
 }
 
@@ -184,6 +192,8 @@ P _customerDeserializeProp<P>(
     case 3:
       return (reader.readDateTime(offset)) as P;
     case 4:
+      return (reader.readLong(offset)) as P;
+    case 5:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -616,11 +626,11 @@ extension CustomerQueryFilter
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> isClosedEqualTo(
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> isCompletedEqualTo(
       bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'isClosed',
+        property: r'isCompleted',
         value: value,
       ));
     });
@@ -671,6 +681,59 @@ extension CustomerQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
         property: r'orderTime',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimesEqualTo(
+      int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'orderTimes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimesGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'orderTimes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimesLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'orderTimes',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimesBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'orderTimes',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -754,15 +817,15 @@ extension CustomerQueryLinks
     on QueryBuilder<Customer, Customer, QFilterCondition> {}
 
 extension CustomerQuerySortBy on QueryBuilder<Customer, Customer, QSortBy> {
-  QueryBuilder<Customer, Customer, QAfterSortBy> sortByIsClosed() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByIsCompleted() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'isClosed', Sort.asc);
+      return query.addSortBy(r'isCompleted', Sort.asc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> sortByIsClosedDesc() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByIsCompletedDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'isClosed', Sort.desc);
+      return query.addSortBy(r'isCompleted', Sort.desc);
     });
   }
 
@@ -775,6 +838,18 @@ extension CustomerQuerySortBy on QueryBuilder<Customer, Customer, QSortBy> {
   QueryBuilder<Customer, Customer, QAfterSortBy> sortByOrderTimeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'orderTime', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByOrderTimes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'orderTimes', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByOrderTimesDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'orderTimes', Sort.desc);
     });
   }
 
@@ -805,15 +880,15 @@ extension CustomerQuerySortThenBy
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> thenByIsClosed() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByIsCompleted() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'isClosed', Sort.asc);
+      return query.addSortBy(r'isCompleted', Sort.asc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> thenByIsClosedDesc() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByIsCompletedDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'isClosed', Sort.desc);
+      return query.addSortBy(r'isCompleted', Sort.desc);
     });
   }
 
@@ -826,6 +901,18 @@ extension CustomerQuerySortThenBy
   QueryBuilder<Customer, Customer, QAfterSortBy> thenByOrderTimeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'orderTime', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByOrderTimes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'orderTimes', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByOrderTimesDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'orderTimes', Sort.desc);
     });
   }
 
@@ -844,15 +931,21 @@ extension CustomerQuerySortThenBy
 
 extension CustomerQueryWhereDistinct
     on QueryBuilder<Customer, Customer, QDistinct> {
-  QueryBuilder<Customer, Customer, QDistinct> distinctByIsClosed() {
+  QueryBuilder<Customer, Customer, QDistinct> distinctByIsCompleted() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'isClosed');
+      return query.addDistinctBy(r'isCompleted');
     });
   }
 
   QueryBuilder<Customer, Customer, QDistinct> distinctByOrderTime() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'orderTime');
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QDistinct> distinctByOrderTimes() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'orderTimes');
     });
   }
 
@@ -885,15 +978,21 @@ extension CustomerQueryProperty
     });
   }
 
-  QueryBuilder<Customer, bool, QQueryOperations> isClosedProperty() {
+  QueryBuilder<Customer, bool, QQueryOperations> isCompletedProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'isClosed');
+      return query.addPropertyName(r'isCompleted');
     });
   }
 
   QueryBuilder<Customer, DateTime, QQueryOperations> orderTimeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'orderTime');
+    });
+  }
+
+  QueryBuilder<Customer, int, QQueryOperations> orderTimesProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'orderTimes');
     });
   }
 
@@ -915,23 +1014,14 @@ const CustomerUnitSchema = Schema(
   name: r'CustomerUnit',
   id: 1288013750335326809,
   properties: {
-    r'foodDoneCount': PropertySchema(
+    r'times2Count': PropertySchema(
       id: 0,
-      name: r'foodDoneCount',
-      type: IsarType.long,
-    ),
-    r'note': PropertySchema(
-      id: 1,
-      name: r'note',
-      type: IsarType.string,
-    ),
-    r'requiredCount': PropertySchema(
-      id: 2,
-      name: r'requiredCount',
-      type: IsarType.long,
+      name: r'times2Count',
+      type: IsarType.objectList,
+      target: r'Times2Count',
     ),
     r'unitId': PropertySchema(
-      id: 3,
+      id: 1,
       name: r'unitId',
       type: IsarType.string,
     )
@@ -948,7 +1038,14 @@ int _customerUnitEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
-  bytesCount += 3 + object.note.length * 3;
+  bytesCount += 3 + object.times2Count.length * 3;
+  {
+    final offsets = allOffsets[Times2Count]!;
+    for (var i = 0; i < object.times2Count.length; i++) {
+      final value = object.times2Count[i];
+      bytesCount += Times2CountSchema.estimateSize(value, offsets, allOffsets);
+    }
+  }
   {
     final value = object.unitId;
     if (value != null) {
@@ -964,10 +1061,13 @@ void _customerUnitSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeLong(offsets[0], object.foodDoneCount);
-  writer.writeString(offsets[1], object.note);
-  writer.writeLong(offsets[2], object.requiredCount);
-  writer.writeString(offsets[3], object.unitId);
+  writer.writeObjectList<Times2Count>(
+    offsets[0],
+    allOffsets,
+    Times2CountSchema.serialize,
+    object.times2Count,
+  );
+  writer.writeString(offsets[1], object.unitId);
 }
 
 CustomerUnit _customerUnitDeserialize(
@@ -977,10 +1077,14 @@ CustomerUnit _customerUnitDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = CustomerUnit();
-  object.foodDoneCount = reader.readLong(offsets[0]);
-  object.note = reader.readString(offsets[1]);
-  object.requiredCount = reader.readLong(offsets[2]);
-  object.unitId = reader.readStringOrNull(offsets[3]);
+  object.times2Count = reader.readObjectList<Times2Count>(
+        offsets[0],
+        Times2CountSchema.deserialize,
+        allOffsets,
+        Times2Count(),
+      ) ??
+      [];
+  object.unitId = reader.readStringOrNull(offsets[1]);
   return object;
 }
 
@@ -992,12 +1096,14 @@ P _customerUnitDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readLong(offset)) as P;
+      return (reader.readObjectList<Times2Count>(
+            offset,
+            Times2CountSchema.deserialize,
+            allOffsets,
+            Times2Count(),
+          ) ??
+          []) as P;
     case 1:
-      return (reader.readString(offset)) as P;
-    case 2:
-      return (reader.readLong(offset)) as P;
-    case 3:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1007,248 +1113,91 @@ P _customerUnitDeserializeProp<P>(
 extension CustomerUnitQueryFilter
     on QueryBuilder<CustomerUnit, CustomerUnit, QFilterCondition> {
   QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      foodDoneCountEqualTo(int value) {
+      times2CountLengthEqualTo(int length) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'foodDoneCount',
-        value: value,
-      ));
+      return query.listLength(
+        r'times2Count',
+        length,
+        true,
+        length,
+        true,
+      );
     });
   }
 
   QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      foodDoneCountGreaterThan(
-    int value, {
+      times2CountIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'times2Count',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      times2CountIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'times2Count',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      times2CountLengthLessThan(
+    int length, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'foodDoneCount',
-        value: value,
-      ));
+      return query.listLength(
+        r'times2Count',
+        0,
+        true,
+        length,
+        include,
+      );
     });
   }
 
   QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      foodDoneCountLessThan(
-    int value, {
+      times2CountLengthGreaterThan(
+    int length, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'foodDoneCount',
-        value: value,
-      ));
+      return query.listLength(
+        r'times2Count',
+        length,
+        include,
+        999999,
+        true,
+      );
     });
   }
 
   QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      foodDoneCountBetween(
+      times2CountLengthBetween(
     int lower,
     int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'foodDoneCount',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      noteGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteLessThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteBetween(
-    String lower,
-    String upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'note',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      noteStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteContains(
-      String value,
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'note',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition> noteMatches(
-      String pattern,
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'note',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      noteIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'note',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      noteIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'note',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      requiredCountEqualTo(int value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'requiredCount',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      requiredCountGreaterThan(
-    int value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'requiredCount',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      requiredCountLessThan(
-    int value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'requiredCount',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      requiredCountBetween(
-    int lower,
-    int upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'requiredCount',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.listLength(
+        r'times2Count',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
     });
   }
 
@@ -1407,7 +1356,199 @@ extension CustomerUnitQueryFilter
 }
 
 extension CustomerUnitQueryObject
-    on QueryBuilder<CustomerUnit, CustomerUnit, QFilterCondition> {}
+    on QueryBuilder<CustomerUnit, CustomerUnit, QFilterCondition> {
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      times2CountElement(FilterQuery<Times2Count> q) {
+    return QueryBuilder.apply(this, (query) {
+      return query.object(q, r'times2Count');
+    });
+  }
+}
+
+// coverage:ignore-file
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+
+const Times2CountSchema = Schema(
+  name: r'Times2Count',
+  id: -6209429911710570159,
+  properties: {
+    r'count': PropertySchema(
+      id: 0,
+      name: r'count',
+      type: IsarType.long,
+    ),
+    r'times': PropertySchema(
+      id: 1,
+      name: r'times',
+      type: IsarType.long,
+    )
+  },
+  estimateSize: _times2CountEstimateSize,
+  serialize: _times2CountSerialize,
+  deserialize: _times2CountDeserialize,
+  deserializeProp: _times2CountDeserializeProp,
+);
+
+int _times2CountEstimateSize(
+  Times2Count object,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  var bytesCount = offsets.last;
+  return bytesCount;
+}
+
+void _times2CountSerialize(
+  Times2Count object,
+  IsarWriter writer,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  writer.writeLong(offsets[0], object.count);
+  writer.writeLong(offsets[1], object.times);
+}
+
+Times2Count _times2CountDeserialize(
+  Id id,
+  IsarReader reader,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  final object = Times2Count();
+  object.count = reader.readLong(offsets[0]);
+  object.times = reader.readLong(offsets[1]);
+  return object;
+}
+
+P _times2CountDeserializeProp<P>(
+  IsarReader reader,
+  int propertyId,
+  int offset,
+  Map<Type, List<int>> allOffsets,
+) {
+  switch (propertyId) {
+    case 0:
+      return (reader.readLong(offset)) as P;
+    case 1:
+      return (reader.readLong(offset)) as P;
+    default:
+      throw IsarError('Unknown property with id $propertyId');
+  }
+}
+
+extension Times2CountQueryFilter
+    on QueryBuilder<Times2Count, Times2Count, QFilterCondition> {
+  QueryBuilder<Times2Count, Times2Count, QAfterFilterCondition> countEqualTo(
+      int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'count',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Times2Count, Times2Count, QAfterFilterCondition>
+      countGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'count',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Times2Count, Times2Count, QAfterFilterCondition> countLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'count',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Times2Count, Times2Count, QAfterFilterCondition> countBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'count',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Times2Count, Times2Count, QAfterFilterCondition> timesEqualTo(
+      int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'times',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Times2Count, Times2Count, QAfterFilterCondition>
+      timesGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'times',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Times2Count, Times2Count, QAfterFilterCondition> timesLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'times',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Times2Count, Times2Count, QAfterFilterCondition> timesBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'times',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+}
+
+extension Times2CountQueryObject
+    on QueryBuilder<Times2Count, Times2Count, QFilterCondition> {}
 
 // coverage:ignore-file
 // ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types

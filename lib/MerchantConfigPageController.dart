@@ -51,8 +51,8 @@ class MerchantConfigPageController extends GetxController with GetSingleTickerPr
       final id = await gIsar.merchantConfigs.put(merchantConfig.value ?? MerchantConfig());
       final result = await gIsar.merchantConfigs.get(id);
       merchantConfig.value = result;
-      tableNumTextEditingController.text = merchantConfig.value!.tableNums.join(tableNumSplit);
-      deviceCodeTextEditingController.text = merchantConfig.value!.pickupCode.deviceCode.toString();
+      tableNumTextEditingController.text = (merchantConfig.value!.tableNums ?? []).join(tableNumSplit);
+      deviceCodeTextEditingController.text = merchantConfig.value!.pickupCode?.deviceCode.toString() ?? "0";
 
       merchantConfig.value!.fatherCateGorys = merchantConfig.value!.fatherCateGorys.toList();
       for (var e in merchantConfig.value!.fatherCateGorys) {
