@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:isar/isar.dart';
 import 'package:liuwei/CustomerPage.dart';
 import 'package:liuwei/MerchantConfigPageController.dart';
+import 'package:liuwei/Tool.dart';
 import 'package:liuwei/main.dart';
 import 'package:liuwei/model/Customer.dart';
 import 'package:liuwei/model/MerchantConfig.dart';
@@ -47,7 +48,7 @@ class CustomerPageController extends GetxController {
 
   final dropdownMenuFocusNode = FocusNode();
 
-  final packPriceTextEditingController = TextEditingController();
+  final extraPriceTextEditingController = TextEditingController();
 
   /// [FatherCateGory.id]
   final hideList = <String>{}.obs;
@@ -69,9 +70,6 @@ class CustomerPageController extends GetxController {
   /// [FatherCateGory.id] to [FatherCateGory]
   final id2FatherCategory = <String, FatherCateGory>{}.obs;
 
-  /// 客户已下单，但商家配置的菜品存在删除的部分
-  final removedUnits = <RemovedUnit>[].obs;
-
   @override
   void onInit() {
     super.onInit();
@@ -87,12 +85,11 @@ class CustomerPageController extends GetxController {
     deleteCustomerTextEditingController.dispose();
     dropdownMenuFocusNode.dispose();
     dropdownMenuTextEditingController.dispose();
-    packPriceTextEditingController.dispose();
+    extraPriceTextEditingController.dispose();
   }
 
   /// [isPop] 是否弹出 [CustomerPage]
   Future<void> pageInit({required bool isPop}) async {
-    removedUnits.clear();
     id2FatherCategory.clear();
     id2SubCategory.clear();
     id2CustomerUnit.clear();
@@ -115,27 +112,16 @@ class CustomerPageController extends GetxController {
       }
     }
 
-    // 筛选出不存在于 units 中的 customerUnits
-    final onlyCustomerUnitIds = id2CustomerUnit.keys.toSet().difference(id2Unit.keys.toSet());
-    // 查询筛选后对应的 removeUnits
-    //TODO: onlyCustomerUnitIds.toList() 为空数组时 ，会被忽略掉 anyOf，因而非导致 findAll 全部数据，因此用 "-" 充斥
-    final onlyRemovedUnits = await gIsar.removedUnits.filter().anyOf(onlyCustomerUnitIds.toList()..add("-"), (q, v) => q.unitIdEqualTo(v)).findAll();
-    // 查询不到 removeUnits 的 CustomerUnit
-    final nullRemovedUnitIds = onlyCustomerUnitIds.difference(onlyRemovedUnits.map((e) => e.unitId).toSet());
-
-    removedUnits.addAll(onlyRemovedUnits);
-    removedUnits.addAll(nullRemovedUnitIds.map((e) => RemovedUnit()..name = "此处存在\"菜品被删除导致数据丢失\"的问题，建议此订单商家手动核算相关金额以完成结算"));
-
     dropdownMenuFocusNode.addListener(() {
       if (!dropdownMenuFocusNode.hasFocus) {
         dropdownMenuTextEditingController.text = customer.value.customerOrder.tableNum;
       }
     });
 
-    packPriceTextEditingController.text = customer.value.customerOrder.packPrice.toString();
+    extraPriceTextEditingController.text = customer.value.customerOrder.extraPrice.toString();
 
     if (isPop) {
-     await SmartDialog.show(
+      await SmartDialog.show(
         builder: (_) {
           return CustomerPage(tag: customer.value.id.toString());
         },
@@ -143,7 +129,7 @@ class CustomerPageController extends GetxController {
           await pageClose();
         },
       );
-     SmartDialog.showToast("已保存！");
+      SmartDialog.showToast("已保存！");
     }
   }
 
@@ -156,9 +142,9 @@ class CustomerPageController extends GetxController {
 
   Unit? getUnitByCustomerUnit(CustomerUnit customerUnit) => id2Unit[customerUnit.unitId];
 
-  SubCateGory getSubGateGoryByUnitId(String unitId) => id2SubCategory[id2Unit[unitId]!.subCateGoryId]!;
+  SubCateGory? getSubGateGoryByUnitId(String unitId) => id2SubCategory[id2Unit[unitId]?.subCateGoryId ?? "已被删除"];
 
-  FatherCateGory getFatherCateGoryByUnitId(String unitId) => id2FatherCategory[id2Unit[unitId]!.fatherCateGoryId]!;
+  FatherCateGory? getFatherCateGoryByUnitId(String unitId) => id2FatherCategory[id2Unit[unitId]?.fatherCateGoryId ?? "已被删除"];
 
   MerchantConfig? get getMerchantConfig => merchantConfigPageController.merchantConfig.value;
 
@@ -183,9 +169,11 @@ class CustomerPageController extends GetxController {
     required CustomerUnit? customerUnit,
   }) async {
     if (unit != null) {
-      final newCustomerUnit = CustomerUnit()
-        ..unitId = unit.id
-        ..requiredCount += 1;
+      final newCustomerUnit = CustomerUnit()..unitId = unit.id;
+      newCustomerUnit.changeTimes2Count(
+        ts: customer.value.orderedTimes + 1,
+        countCallBack: (oldCount) => 1,
+      );
       customer.value.customerUnits.add(newCustomerUnit);
       await gIsar.writeTxn(
         () async {
@@ -195,7 +183,7 @@ class CustomerPageController extends GetxController {
       id2CustomerUnit[unit.id] = newCustomerUnit;
       customer.refresh();
     } else {
-      customerUnit!.requiredCount += 1;
+      customerUnit!.changeTimes2Count(ts: customer.value.orderedTimes + 1, countCallBack: (oldCount) => oldCount + 1);
       await gIsar.writeTxn(
         () async {
           await gIsar.customers.put(customer.value);
@@ -212,18 +200,41 @@ class CustomerPageController extends GetxController {
         if (customerUnit == null) {
           return;
         }
-        customerUnit.requiredCount += -1;
-        if (customerUnit.requiredCount <= 0) {
-          customerUnit.requiredCount = 0;
+        await customerUnit.changeTimes2Count(ts: customer.value.orderedTimes + 1, countCallBack: (oldCount) => oldCount - 1);
+        if (customerUnit.times2Counts.isEmpty) {
           customer.value.customerUnits.remove(customerUnit);
           id2CustomerUnit.remove(customerUnit.unitId);
-          removedUnits.remove(removedUnit);
         }
         await gIsar.customers.put(customer.value);
       },
     );
     customer.refresh();
     homePageController.showCustomers.refresh();
+  }
+
+  /// 清空当前订单的所有菜品
+  Future<void> customerUnitClearForCurrent() async {
+    for (var e in customer.value.customerUnits) {
+      e.changeTimes2Count(
+        ts: customer.value.orderedTimes + 1,
+        countCallBack: (old) => 0,
+      );
+    }
+    customer.value.customerUnits.removeWhere(
+      (e) {
+        final isE = e.times2Counts.isEmpty;
+        if (isE) {
+          id2CustomerUnit.remove(e.unitId);
+        }
+        return isE;
+      },
+    );
+    await gIsar.writeTxn(
+      () async {
+        await gIsar.customers.put(customer.value);
+      },
+    );
+    customer.refresh();
   }
 
   /// 获取当前订单取餐号
@@ -242,18 +253,10 @@ class CustomerPageController extends GetxController {
       final u = id2Unit[e.unitId];
       if (u != null) {
         double p = u.price;
-        int count = e.requiredCount;
-        price += p * count;
+        price += p * e.getTotalCount;
       }
     }
-    for (var e in removedUnits) {
-      // 为 null 时说明数量是 0，因为数量是 0 时 CustomerUnit 会被移除
-      final u = id2CustomerUnit[e.unitId];
-      double p = e.price;
-      int count = u?.requiredCount ?? 0;
-      price += p * count;
-    }
-    price += customer.value.customerOrder.packPrice;
+    price += customer.value.customerOrder.extraPrice;
     return double.parse(price.toStringAsFixed(2));
   }
 
@@ -267,49 +270,32 @@ class CustomerPageController extends GetxController {
     return PriceStatus.customerUnderpaid;
   }
 
-  /// 结单
-  Future<void> orderCloseChange() async {
-    if (customer.value.isClosed) {
+  /// 确认下单
+  Future<void> confirmOrder() async {
+    customer.value.orderedTimes += 1;
+    customer.value.isConfirmed = true;
+    if (customer.value.orderedTimes == 1) {
+      customer.value.customerOrder.firstOrderTime = DateTime.now();
+    }
+    await refreshAndWriteCustomer();
+  }
+
+  /// 完成订单
+  Future<void> changeCompletedOrder() async {
+    // TODO: 注意写入时间
+    if (customer.value.isCompleted) {
       SmartDialog.show(
         builder: (_) {
-          return Card(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 20, horizontal: 50),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    "是否要重新唤醒订单？",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 20),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextButton(
-                        child: Text("返回", style: TextStyle(fontSize: 20)),
-                        style: ButtonStyle(fixedSize: WidgetStatePropertyAll(Size(150, 50))),
-                        onPressed: () {
-                          SmartDialog.dismiss(status: SmartStatus.dialog);
-                        },
-                      ),
-                      TextButton(
-                        child: Text("确定唤醒", style: TextStyle(fontSize: 20, color: Colors.red)),
-                        style: ButtonStyle(fixedSize: WidgetStatePropertyAll(Size(150, 50))),
-                        onPressed: () async {
-                          customer.value.isClosed = false;
-                          customer.refresh();
-                          await refreshAndWriteCustomer();
-                          await homePageController.refreshAllShowCustomers();
-                          SmartDialog.dismiss(status: SmartStatus.dialog);
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          return ShowOkCancel(
+            title: "是否要重新唤醒订单？",
+            okText: "确定",
+            cancelText: "返回",
+            onOk: () async {
+              customer.value.isCompleted = false;
+              customer.refresh();
+              await refreshAndWriteCustomer();
+              await homePageController.refreshAllShowCustomers();
+            },
           );
         },
       );
@@ -317,94 +303,45 @@ class CustomerPageController extends GetxController {
       if (priceStatus != PriceStatus.clear) {
         SmartDialog.show(
           builder: (_) {
-            return Card(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20, horizontal: 50),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      "应付款（${calRequiredPrice()}）与已付款（${customer.value.customerOrder.paidPrice}）金额不对应，是否要结单？",
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 20),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextButton(
-                          child: Text("返回", style: TextStyle(fontSize: 20)),
-                          style: ButtonStyle(fixedSize: WidgetStatePropertyAll(Size(150, 50))),
-                          onPressed: () {
-                            SmartDialog.dismiss(status: SmartStatus.dialog);
-                          },
-                        ),
-                        TextButton(
-                          child: Text("确定结单", style: TextStyle(fontSize: 20, color: Colors.red)),
-                          style: ButtonStyle(fixedSize: WidgetStatePropertyAll(Size(150, 50))),
-                          onPressed: () async {
-                            customer.value.isClosed = true;
-                            customer.refresh();
-                            await refreshAndWriteCustomer();
-                            await homePageController.refreshAllShowCustomers();
-                            SmartDialog.dismiss(status: SmartStatus.dialog);
-                            SmartDialog.dismiss(status: SmartStatus.dialog);
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+            return ShowOkCancel(
+              title: "应付款（${calRequiredPrice()}）与已付款（${customer.value.customerOrder.paidPrice}）金额不对应，是否要完成订单？",
+              okText: "确定",
+              cancelText: "返回",
+              onOk: () async {
+                customer.value.isCompleted = true;
+                customer.refresh();
+                await refreshAndWriteCustomer();
+                await homePageController.refreshAllShowCustomers();
+              },
             );
           },
         );
       } else {
         SmartDialog.show(
           builder: (_) {
-            return Card(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20, horizontal: 50),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      "客户付款金额准确，是否要结单？",
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 20),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextButton(
-                          child: Text("返回", style: TextStyle(fontSize: 20)),
-                          style: ButtonStyle(fixedSize: WidgetStatePropertyAll(Size(150, 50))),
-                          onPressed: () {
-                            SmartDialog.dismiss(status: SmartStatus.dialog);
-                          },
-                        ),
-                        TextButton(
-                          child: Text("确定结单", style: TextStyle(fontSize: 20, color: Colors.red)),
-                          style: ButtonStyle(fixedSize: WidgetStatePropertyAll(Size(150, 50))),
-                          onPressed: () async {
-                            customer.value.isClosed = true;
-                            customer.refresh();
-                            await refreshAndWriteCustomer();
-                            await homePageController.refreshAllShowCustomers();
-                            SmartDialog.dismiss(status: SmartStatus.dialog);
-                            SmartDialog.dismiss(status: SmartStatus.dialog);
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+            return ShowOkCancel(
+              title: "客户付款金额准确，是否要完成订单？",
+              okText: "确定",
+              cancelText: "返回",
+              onOk: () async {
+                customer.value.isCompleted = true;
+                customer.refresh();
+                await refreshAndWriteCustomer();
+                await homePageController.refreshAllShowCustomers();
+              },
             );
           },
         );
       }
     }
+  }
+
+  /// [orderScrollController] 滚动到最后
+  void orderMoveToEnd() {
+    orderScrollController.animateTo(
+      orderScrollController.position.maxScrollExtent,
+      duration: Duration(milliseconds: 200), // 动画持续时间
+      curve: Curves.easeOut, // 动画曲线
+    );
   }
 }

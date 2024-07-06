@@ -143,11 +143,11 @@ class CustomerWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       child: Card(
-        color: customer.value.isClosed
-            ? Colors.white54
-            : (customerPageController.priceStatus == PriceStatus.clear
-                ? null
-                : (customerPageController.priceStatus == PriceStatus.customerOverpaid ? Colors.yellow : Colors.greenAccent)),
+        // color: customer.value.isClosed
+        //     ? Colors.white54
+        //     : (customerPageController.priceStatus == PriceStatus.clear
+        //         ? null
+        //         : (customerPageController.priceStatus == PriceStatus.customerOverpaid ? Colors.yellow : Colors.greenAccent)),
         margin: EdgeInsets.all(10),
         child: Padding(
           padding: EdgeInsets.fromLTRB(10, 10, 0, 10),
@@ -202,23 +202,10 @@ class CustomerWidget extends StatelessWidget {
                             }
                             return Obx(
                               () => Text(
-                                "${customerPageController.getFatherCateGoryByUnitId(e.unitId!).name} "
-                                "${customerPageController.getSubGateGoryByUnitId(e.unitId!).name} "
-                                "× ${e.requiredCount} ${customerPageController.id2Unit[e.unitId!]!.name}",
+                                "${customerPageController.getFatherCateGoryByUnitId(e.unitId!)?.name ?? "已被删除"} "
+                                "${customerPageController.getSubGateGoryByUnitId(e.unitId!)?.name ?? "已被删除"} "
+                                "× ${e.times2Counts.fold(0, (p, t2c) => p + t2c.count)} ${customerPageController.id2Unit[e.unitId!]?.name ?? "已被删除"}",
                               ),
-                            );
-                          },
-                        ),
-                        ...customerPageController.removedUnits.map(
-                          (ru) {
-                            final cu = customerPageController.id2CustomerUnit[ru.unitId];
-                            if (cu == null) {
-                              return Container();
-                            }
-                            return Text(
-                              "${ru.fatherCateGoryName} "
-                              "${ru.subCateGoryName} "
-                              "× ${cu.requiredCount} ${ru.name}",
                             );
                           },
                         ),
@@ -230,29 +217,33 @@ class CustomerWidget extends StatelessWidget {
               SizedBox(height: 5),
               Row(
                 children: [
-                  Text(customer.value.orderTime.onlyTime, style: TextStyle(color: Colors.grey)),
+                  Text(customer.value.firstOrderTime.onlyTime, style: TextStyle(color: Colors.grey)),
                   Spacer(),
-                  if (customer.value.isClosed)
+                  if (customer.value.isCompleted)
                     const Text(
-                      "已结单 ● ",
-                      style: TextStyle(fontSize: 22, color: Colors.grey),
+                      "完成已订单 ● ",
+                      style: TextStyle(fontSize: 18, color: Colors.green),
                     ),
-                  if (customerPageController.priceStatus == PriceStatus.clear)
+                  if (customer.value.orderedTimes == 0)
+                    const Text(
+                      "未初始下单",
+                      style: TextStyle(fontSize: 18, color: Colors.blue),
+                    ),
+                  if (customer.value.orderedTimes != 0 && customerPageController.priceStatus == PriceStatus.clear)
                     const Text(
                       "已结清",
-                      style: TextStyle(fontSize: 22, color: Colors.grey),
+                      style: TextStyle(fontSize: 18, color: Colors.green),
                     ),
-                  if (customerPageController.priceStatus == PriceStatus.customerOverpaid)
+                  if (customer.value.orderedTimes != 0 && customerPageController.priceStatus == PriceStatus.customerOverpaid)
                     const Text(
                       "超额支付",
-                      style: TextStyle(fontSize: 22, color: Colors.yellow),
+                      style: TextStyle(fontSize: 18, color: Colors.amber),
                     ),
-                  if (customerPageController.priceStatus == PriceStatus.customerUnderpaid)
+                  if (customer.value.orderedTimes != 0 && customerPageController.priceStatus == PriceStatus.customerUnderpaid)
                     const Text(
                       "未结清",
-                      style: TextStyle(fontSize: 22, color: Colors.red),
+                      style: TextStyle(fontSize: 18, color: Colors.red),
                     ),
-                  SizedBox(width: 10),
                   Icon(Icons.chevron_right, color: Colors.grey),
                   SizedBox(width: 10),
                 ],

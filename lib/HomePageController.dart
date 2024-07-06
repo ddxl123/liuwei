@@ -10,10 +10,10 @@ import 'MerchantConfigPageController.dart';
 import 'model/Customer.dart';
 
 enum CustomersSortType {
-  /// 时间递增（最近在后）
+  /// 初始下单时间递增（最近在后）
   timeAsc("最近在后"),
 
-  /// 时间递减（最近在前）
+  /// 初始下单时间递减（最近在前）
   timeDesc("最近在前");
 
   const CustomersSortType(this.text);
@@ -25,8 +25,14 @@ enum CustomersFilterType {
   /// 显示全部
   all("显示全部"),
 
-  /// 显示全部未结单
-  onlyNotCloseOrder("仅显示未结单");
+  /// 仅显示未完成订单
+  onlyNotCompletedOrder("仅显示未完成订单"),
+
+  /// 仅显示已完成订单
+  onlyCompletedOrder("仅显示已完成订单"),
+
+  /// 仅显示无效订单
+  onlyInvalidOrder("仅显示无效订单");
 
   const CustomersFilterType(this.text);
 
@@ -46,7 +52,7 @@ class HomePageController extends GetxController {
 
   final customersSortType = CustomersSortType.timeDesc.obs;
 
-  final customersFilterType = CustomersFilterType.onlyNotCloseOrder.obs;
+  final customersFilterType = CustomersFilterType.onlyNotCompletedOrder.obs;
 
   int customersOffset = 0;
   int customersLimit = 200;
@@ -61,21 +67,77 @@ class HomePageController extends GetxController {
   Future<void> refreshAllShowCustomers() async {
     late final List<Customer> customerList;
     showCustomers.clear();
-    if (customersFilterType.value == CustomersFilterType.onlyNotCloseOrder) {
+    if (customersFilterType.value == CustomersFilterType.onlyNotCompletedOrder) {
       switch (customersSortType.value) {
         case CustomersSortType.timeAsc:
-          customerList = await gIsar.customers.where().filter().isClosedEqualTo(false).sortByOrderTime().findAll();
+          customerList = await gIsar.customers
+              .where()
+              .filter()
+              .isCompletedEqualTo(false)
+              .and()
+              .isInvalidEqualTo(false)
+              .sortByFirstOrderTime()
+              .offset(customersOffset)
+              .limit(customersLimit)
+              .findAll();
         case CustomersSortType.timeDesc:
-          customerList = await gIsar.customers.where().filter().isClosedEqualTo(false).sortByOrderTimeDesc().findAll();
+          customerList = await gIsar.customers
+              .where()
+              .filter()
+              .isCompletedEqualTo(false)
+              .and()
+              .isInvalidEqualTo(false)
+              .sortByFirstOrderTimeDesc()
+              .offset(customersOffset)
+              .limit(customersLimit)
+              .findAll();
+        default:
+          throw "未处理${customersSortType.value}";
+      }
+    } else if (customersFilterType.value == CustomersFilterType.onlyCompletedOrder) {
+      switch (customersSortType.value) {
+        case CustomersSortType.timeAsc:
+          customerList = await gIsar.customers
+              .where()
+              .filter()
+              .isCompletedEqualTo(true)
+              .and()
+              .isInvalidEqualTo(false)
+              .sortByFirstOrderTime()
+              .offset(customersOffset)
+              .limit(customersLimit)
+              .findAll();
+        case CustomersSortType.timeDesc:
+          customerList = await gIsar.customers
+              .where()
+              .filter()
+              .isCompletedEqualTo(true)
+              .and()
+              .isInvalidEqualTo(false)
+              .sortByFirstOrderTimeDesc()
+              .offset(customersOffset)
+              .limit(customersLimit)
+              .findAll();
+        default:
+          throw "未处理${customersSortType.value}";
+      }
+    } else if (customersFilterType.value == CustomersFilterType.onlyInvalidOrder) {
+      switch (customersSortType.value) {
+        case CustomersSortType.timeAsc:
+          customerList =
+              await gIsar.customers.where().filter().isInvalidEqualTo(true).sortByFirstOrderTime().offset(customersOffset).limit(customersLimit).findAll();
+        case CustomersSortType.timeDesc:
+          customerList =
+              await gIsar.customers.where().filter().isInvalidEqualTo(true).sortByFirstOrderTimeDesc().offset(customersOffset).limit(customersLimit).findAll();
         default:
           throw "未处理${customersSortType.value}";
       }
     } else if (customersFilterType.value == CustomersFilterType.all) {
       switch (customersSortType.value) {
         case CustomersSortType.timeAsc:
-          customerList = await gIsar.customers.where().sortByOrderTime().offset(customersOffset).limit(customersLimit).findAll();
+          customerList = await gIsar.customers.where().sortByFirstOrderTime().offset(customersOffset).limit(customersLimit).findAll();
         case CustomersSortType.timeDesc:
-          customerList = await gIsar.customers.where().sortByOrderTimeDesc().offset(customersOffset).limit(customersLimit).findAll();
+          customerList = await gIsar.customers.where().sortByFirstOrderTimeDesc().offset(customersOffset).limit(customersLimit).findAll();
         default:
           throw "未处理${customersSortType.value}";
       }
@@ -86,6 +148,9 @@ class HomePageController extends GetxController {
     showCustomers.addAll(customerList.map((e) => e.obs).toList());
     for (var e in showCustomers) {
       e.value.customerUnits = e.value.customerUnits.toList();
+      for (var ee in e.value.customerUnits) {
+        ee.times2Counts = ee.times2Counts.toList();
+      }
     }
     showCustomers.refresh();
   }
@@ -97,8 +162,9 @@ class HomePageController extends GetxController {
     isCustomerAdding.value = true;
     await gIsar.writeTxn(
       () async {
-        final id =
-            await gIsar.customers.put(Customer()..customerOrder.pickupCode = merchantConfigPageController.merchantConfig.value!.pickupCode?.nextCode ?? 0);
+        final id = await gIsar.customers.put(
+          Customer()..customerOrder.pickupCode = merchantConfigPageController.merchantConfig.value!.pickupCode?.nextCode ?? 0,
+        );
         merchantConfigPageController.merchantConfig.value!.pickupCode?.nextCode += 1;
         await merchantConfigPageController.refreshMerchantConfig(isTxn: false);
         final result = (await gIsar.customers.get(id))!.obs;
@@ -107,18 +173,22 @@ class HomePageController extends GetxController {
       },
     );
     isCustomerAdding.value = false;
+
+    // 因为 CustomerPageController 的初始化是在 HomePage 的订单 Widget 中初始化的，因此需要跳转到对应的筛选中才能初始化
+    if (customersFilterType.value != CustomersFilterType.all && customersFilterType.value != CustomersFilterType.onlyNotCompletedOrder) {
+      customersFilterType.value = CustomersFilterType.onlyNotCompletedOrder;
+      customersFilterType.refresh();
+      await refreshAllShowCustomers();
+    }
   }
 
-  /// TODO: 删除失败问题
-  Future<void> deleteCustomer({required Rx<Customer> customer}) async {
+  /// 设置是否为无效订单
+  Future<void> changeInvalidCustomerOrder({required Rx<Customer> customer}) async {
     await gIsar.writeTxn(
       () async {
-        await gIsar.customers.delete(customer.value.id);
-        print(showCustomers.remove(customer.value));
-        showCustomers.refresh();
+        customer.value.isInvalid = !customer.value.isInvalid;
+        await gIsar.customers.put(customer.value);
         await refreshAllShowCustomers();
-        print(showCustomers.length);
-        showCustomers.refresh();
       },
     );
   }

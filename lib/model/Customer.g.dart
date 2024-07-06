@@ -17,36 +17,51 @@ const CustomerSchema = CollectionSchema(
   name: r'Customer',
   id: -7623823084711604343,
   properties: {
-    r'customerOrder': PropertySchema(
+    r'completedOrderTime': PropertySchema(
       id: 0,
+      name: r'completedOrderTime',
+      type: IsarType.dateTime,
+    ),
+    r'customerOrder': PropertySchema(
+      id: 1,
       name: r'customerOrder',
       type: IsarType.object,
       target: r'CustomerOrder',
     ),
+    r'customerTraitsQuickNote': PropertySchema(
+      id: 2,
+      name: r'customerTraitsQuickNote',
+      type: IsarType.string,
+    ),
     r'customerUnits': PropertySchema(
-      id: 1,
+      id: 3,
       name: r'customerUnits',
       type: IsarType.objectList,
       target: r'CustomerUnit',
     ),
+    r'firstOrderTime': PropertySchema(
+      id: 4,
+      name: r'firstOrderTime',
+      type: IsarType.dateTime,
+    ),
     r'isCompleted': PropertySchema(
-      id: 2,
+      id: 5,
       name: r'isCompleted',
       type: IsarType.bool,
     ),
-    r'orderTime': PropertySchema(
-      id: 3,
-      name: r'orderTime',
-      type: IsarType.dateTime,
+    r'isConfirmed': PropertySchema(
+      id: 6,
+      name: r'isConfirmed',
+      type: IsarType.bool,
     ),
-    r'orderTimes': PropertySchema(
-      id: 4,
-      name: r'orderTimes',
-      type: IsarType.long,
+    r'isInvalid': PropertySchema(
+      id: 7,
+      name: r'isInvalid',
+      type: IsarType.bool,
     ),
-    r'pickupCode': PropertySchema(
-      id: 5,
-      name: r'pickupCode',
+    r'orderedTimes': PropertySchema(
+      id: 8,
+      name: r'orderedTimes',
       type: IsarType.long,
     )
   },
@@ -56,27 +71,27 @@ const CustomerSchema = CollectionSchema(
   deserializeProp: _customerDeserializeProp,
   idName: r'id',
   indexes: {
-    r'pickupCode': IndexSchema(
-      id: -5736487545650693077,
-      name: r'pickupCode',
+    r'firstOrderTime': IndexSchema(
+      id: 7443296712344565874,
+      name: r'firstOrderTime',
       unique: false,
       replace: false,
       properties: [
         IndexPropertySchema(
-          name: r'pickupCode',
+          name: r'firstOrderTime',
           type: IndexType.value,
           caseSensitive: false,
         )
       ],
     ),
-    r'orderTime': IndexSchema(
-      id: 2995476528269330214,
-      name: r'orderTime',
+    r'completedOrderTime': IndexSchema(
+      id: 924249719891103775,
+      name: r'completedOrderTime',
       unique: false,
       replace: false,
       properties: [
         IndexPropertySchema(
-          name: r'orderTime',
+          name: r'completedOrderTime',
           type: IndexType.value,
           caseSensitive: false,
         )
@@ -104,6 +119,7 @@ int _customerEstimateSize(
   bytesCount += 3 +
       CustomerOrderSchema.estimateSize(
           object.customerOrder, allOffsets[CustomerOrder]!, allOffsets);
+  bytesCount += 3 + object.customerTraitsQuickNote.length * 3;
   bytesCount += 3 + object.customerUnits.length * 3;
   {
     final offsets = allOffsets[CustomerUnit]!;
@@ -121,22 +137,25 @@ void _customerSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
+  writer.writeDateTime(offsets[0], object.completedOrderTime);
   writer.writeObject<CustomerOrder>(
-    offsets[0],
+    offsets[1],
     allOffsets,
     CustomerOrderSchema.serialize,
     object.customerOrder,
   );
+  writer.writeString(offsets[2], object.customerTraitsQuickNote);
   writer.writeObjectList<CustomerUnit>(
-    offsets[1],
+    offsets[3],
     allOffsets,
     CustomerUnitSchema.serialize,
     object.customerUnits,
   );
-  writer.writeBool(offsets[2], object.isCompleted);
-  writer.writeDateTime(offsets[3], object.orderTime);
-  writer.writeLong(offsets[4], object.orderTimes);
-  writer.writeLong(offsets[5], object.pickupCode);
+  writer.writeDateTime(offsets[4], object.firstOrderTime);
+  writer.writeBool(offsets[5], object.isCompleted);
+  writer.writeBool(offsets[6], object.isConfirmed);
+  writer.writeBool(offsets[7], object.isInvalid);
+  writer.writeLong(offsets[8], object.orderedTimes);
 }
 
 Customer _customerDeserialize(
@@ -147,21 +166,24 @@ Customer _customerDeserialize(
 ) {
   final object = Customer();
   object.customerOrder = reader.readObjectOrNull<CustomerOrder>(
-        offsets[0],
+        offsets[1],
         CustomerOrderSchema.deserialize,
         allOffsets,
       ) ??
       CustomerOrder();
+  object.customerTraitsQuickNote = reader.readString(offsets[2]);
   object.customerUnits = reader.readObjectList<CustomerUnit>(
-        offsets[1],
+        offsets[3],
         CustomerUnitSchema.deserialize,
         allOffsets,
         CustomerUnit(),
       ) ??
       [];
   object.id = id;
-  object.isCompleted = reader.readBool(offsets[2]);
-  object.orderTimes = reader.readLong(offsets[4]);
+  object.isCompleted = reader.readBool(offsets[5]);
+  object.isConfirmed = reader.readBool(offsets[6]);
+  object.isInvalid = reader.readBool(offsets[7]);
+  object.orderedTimes = reader.readLong(offsets[8]);
   return object;
 }
 
@@ -173,13 +195,17 @@ P _customerDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
+      return (reader.readDateTime(offset)) as P;
+    case 1:
       return (reader.readObjectOrNull<CustomerOrder>(
             offset,
             CustomerOrderSchema.deserialize,
             allOffsets,
           ) ??
           CustomerOrder()) as P;
-    case 1:
+    case 2:
+      return (reader.readString(offset)) as P;
+    case 3:
       return (reader.readObjectList<CustomerUnit>(
             offset,
             CustomerUnitSchema.deserialize,
@@ -187,13 +213,15 @@ P _customerDeserializeProp<P>(
             CustomerUnit(),
           ) ??
           []) as P;
-    case 2:
-      return (reader.readBool(offset)) as P;
-    case 3:
-      return (reader.readDateTime(offset)) as P;
     case 4:
-      return (reader.readLong(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 5:
+      return (reader.readBool(offset)) as P;
+    case 6:
+      return (reader.readBool(offset)) as P;
+    case 7:
+      return (reader.readBool(offset)) as P;
+    case 8:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -219,18 +247,18 @@ extension CustomerQueryWhereSort on QueryBuilder<Customer, Customer, QWhere> {
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhere> anyPickupCode() {
+  QueryBuilder<Customer, Customer, QAfterWhere> anyFirstOrderTime() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'pickupCode'),
+        const IndexWhereClause.any(indexName: r'firstOrderTime'),
       );
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhere> anyOrderTime() {
+  QueryBuilder<Customer, Customer, QAfterWhere> anyCompletedOrderTime() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'orderTime'),
+        const IndexWhereClause.any(indexName: r'completedOrderTime'),
       );
     });
   }
@@ -302,181 +330,183 @@ extension CustomerQueryWhere on QueryBuilder<Customer, Customer, QWhereClause> {
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhereClause> pickupCodeEqualTo(
-      int pickupCode) {
+  QueryBuilder<Customer, Customer, QAfterWhereClause> firstOrderTimeEqualTo(
+      DateTime firstOrderTime) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'pickupCode',
-        value: [pickupCode],
+        indexName: r'firstOrderTime',
+        value: [firstOrderTime],
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhereClause> pickupCodeNotEqualTo(
-      int pickupCode) {
+  QueryBuilder<Customer, Customer, QAfterWhereClause> firstOrderTimeNotEqualTo(
+      DateTime firstOrderTime) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'pickupCode',
+              indexName: r'firstOrderTime',
               lower: [],
-              upper: [pickupCode],
+              upper: [firstOrderTime],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'pickupCode',
-              lower: [pickupCode],
+              indexName: r'firstOrderTime',
+              lower: [firstOrderTime],
               includeLower: false,
               upper: [],
             ));
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'pickupCode',
-              lower: [pickupCode],
+              indexName: r'firstOrderTime',
+              lower: [firstOrderTime],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'pickupCode',
+              indexName: r'firstOrderTime',
               lower: [],
-              upper: [pickupCode],
+              upper: [firstOrderTime],
               includeUpper: false,
             ));
       }
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhereClause> pickupCodeGreaterThan(
-    int pickupCode, {
+  QueryBuilder<Customer, Customer, QAfterWhereClause> firstOrderTimeGreaterThan(
+    DateTime firstOrderTime, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'pickupCode',
-        lower: [pickupCode],
+        indexName: r'firstOrderTime',
+        lower: [firstOrderTime],
         includeLower: include,
         upper: [],
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhereClause> pickupCodeLessThan(
-    int pickupCode, {
+  QueryBuilder<Customer, Customer, QAfterWhereClause> firstOrderTimeLessThan(
+    DateTime firstOrderTime, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'pickupCode',
+        indexName: r'firstOrderTime',
         lower: [],
-        upper: [pickupCode],
+        upper: [firstOrderTime],
         includeUpper: include,
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhereClause> pickupCodeBetween(
-    int lowerPickupCode,
-    int upperPickupCode, {
+  QueryBuilder<Customer, Customer, QAfterWhereClause> firstOrderTimeBetween(
+    DateTime lowerFirstOrderTime,
+    DateTime upperFirstOrderTime, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'pickupCode',
-        lower: [lowerPickupCode],
+        indexName: r'firstOrderTime',
+        lower: [lowerFirstOrderTime],
         includeLower: includeLower,
-        upper: [upperPickupCode],
+        upper: [upperFirstOrderTime],
         includeUpper: includeUpper,
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhereClause> orderTimeEqualTo(
-      DateTime orderTime) {
+  QueryBuilder<Customer, Customer, QAfterWhereClause> completedOrderTimeEqualTo(
+      DateTime completedOrderTime) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'orderTime',
-        value: [orderTime],
+        indexName: r'completedOrderTime',
+        value: [completedOrderTime],
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhereClause> orderTimeNotEqualTo(
-      DateTime orderTime) {
+  QueryBuilder<Customer, Customer, QAfterWhereClause>
+      completedOrderTimeNotEqualTo(DateTime completedOrderTime) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'orderTime',
+              indexName: r'completedOrderTime',
               lower: [],
-              upper: [orderTime],
+              upper: [completedOrderTime],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'orderTime',
-              lower: [orderTime],
+              indexName: r'completedOrderTime',
+              lower: [completedOrderTime],
               includeLower: false,
               upper: [],
             ));
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'orderTime',
-              lower: [orderTime],
+              indexName: r'completedOrderTime',
+              lower: [completedOrderTime],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'orderTime',
+              indexName: r'completedOrderTime',
               lower: [],
-              upper: [orderTime],
+              upper: [completedOrderTime],
               includeUpper: false,
             ));
       }
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhereClause> orderTimeGreaterThan(
-    DateTime orderTime, {
+  QueryBuilder<Customer, Customer, QAfterWhereClause>
+      completedOrderTimeGreaterThan(
+    DateTime completedOrderTime, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'orderTime',
-        lower: [orderTime],
+        indexName: r'completedOrderTime',
+        lower: [completedOrderTime],
         includeLower: include,
         upper: [],
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhereClause> orderTimeLessThan(
-    DateTime orderTime, {
+  QueryBuilder<Customer, Customer, QAfterWhereClause>
+      completedOrderTimeLessThan(
+    DateTime completedOrderTime, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'orderTime',
+        indexName: r'completedOrderTime',
         lower: [],
-        upper: [orderTime],
+        upper: [completedOrderTime],
         includeUpper: include,
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterWhereClause> orderTimeBetween(
-    DateTime lowerOrderTime,
-    DateTime upperOrderTime, {
+  QueryBuilder<Customer, Customer, QAfterWhereClause> completedOrderTimeBetween(
+    DateTime lowerCompletedOrderTime,
+    DateTime upperCompletedOrderTime, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'orderTime',
-        lower: [lowerOrderTime],
+        indexName: r'completedOrderTime',
+        lower: [lowerCompletedOrderTime],
         includeLower: includeLower,
-        upper: [upperOrderTime],
+        upper: [upperCompletedOrderTime],
         includeUpper: includeUpper,
       ));
     });
@@ -485,6 +515,200 @@ extension CustomerQueryWhere on QueryBuilder<Customer, Customer, QWhereClause> {
 
 extension CustomerQueryFilter
     on QueryBuilder<Customer, Customer, QFilterCondition> {
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      completedOrderTimeEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'completedOrderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      completedOrderTimeGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'completedOrderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      completedOrderTimeLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'completedOrderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      completedOrderTimeBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'completedOrderTime',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerTraitsQuickNoteEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'customerTraitsQuickNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerTraitsQuickNoteGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'customerTraitsQuickNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerTraitsQuickNoteLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'customerTraitsQuickNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerTraitsQuickNoteBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'customerTraitsQuickNote',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerTraitsQuickNoteStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'customerTraitsQuickNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerTraitsQuickNoteEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'customerTraitsQuickNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerTraitsQuickNoteContains(String value,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'customerTraitsQuickNote',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerTraitsQuickNoteMatches(String pattern,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'customerTraitsQuickNote',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerTraitsQuickNoteIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'customerTraitsQuickNote',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      customerTraitsQuickNoteIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'customerTraitsQuickNote',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Customer, Customer, QAfterFilterCondition>
       customerUnitsLengthEqualTo(int length) {
     return QueryBuilder.apply(this, (query) {
@@ -574,6 +798,61 @@ extension CustomerQueryFilter
     });
   }
 
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> firstOrderTimeEqualTo(
+      DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'firstOrderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      firstOrderTimeGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'firstOrderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      firstOrderTimeLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'firstOrderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> firstOrderTimeBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'firstOrderTime',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<Customer, Customer, QAfterFilterCondition> idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -636,96 +915,64 @@ extension CustomerQueryFilter
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimeEqualTo(
-      DateTime value) {
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> isConfirmedEqualTo(
+      bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'orderTime',
+        property: r'isConfirmed',
         value: value,
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimeGreaterThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> isInvalidEqualTo(
+      bool value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'orderTime',
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isInvalid',
         value: value,
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimeLessThan(
-    DateTime value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'orderTime',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimeBetween(
-    DateTime lower,
-    DateTime upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'orderTime',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimesEqualTo(
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderedTimesEqualTo(
       int value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'orderTimes',
+        property: r'orderedTimes',
         value: value,
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimesGreaterThan(
+  QueryBuilder<Customer, Customer, QAfterFilterCondition>
+      orderedTimesGreaterThan(
     int value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'orderTimes',
+        property: r'orderedTimes',
         value: value,
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimesLessThan(
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderedTimesLessThan(
     int value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'orderTimes',
+        property: r'orderedTimes',
         value: value,
       ));
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderTimesBetween(
+  QueryBuilder<Customer, Customer, QAfterFilterCondition> orderedTimesBetween(
     int lower,
     int upper, {
     bool includeLower = true,
@@ -733,60 +980,7 @@ extension CustomerQueryFilter
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'orderTimes',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
-    });
-  }
-
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> pickupCodeEqualTo(
-      int value) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'pickupCode',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> pickupCodeGreaterThan(
-    int value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'pickupCode',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> pickupCodeLessThan(
-    int value, {
-    bool include = false,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'pickupCode',
-        value: value,
-      ));
-    });
-  }
-
-  QueryBuilder<Customer, Customer, QAfterFilterCondition> pickupCodeBetween(
-    int lower,
-    int upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'pickupCode',
+        property: r'orderedTimes',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -817,6 +1011,45 @@ extension CustomerQueryLinks
     on QueryBuilder<Customer, Customer, QFilterCondition> {}
 
 extension CustomerQuerySortBy on QueryBuilder<Customer, Customer, QSortBy> {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByCompletedOrderTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'completedOrderTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy>
+      sortByCompletedOrderTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'completedOrderTime', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy>
+      sortByCustomerTraitsQuickNote() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerTraitsQuickNote', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy>
+      sortByCustomerTraitsQuickNoteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerTraitsQuickNote', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByFirstOrderTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'firstOrderTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByFirstOrderTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'firstOrderTime', Sort.desc);
+    });
+  }
+
   QueryBuilder<Customer, Customer, QAfterSortBy> sortByIsCompleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isCompleted', Sort.asc);
@@ -829,45 +1062,84 @@ extension CustomerQuerySortBy on QueryBuilder<Customer, Customer, QSortBy> {
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> sortByOrderTime() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByIsConfirmed() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'orderTime', Sort.asc);
+      return query.addSortBy(r'isConfirmed', Sort.asc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> sortByOrderTimeDesc() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByIsConfirmedDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'orderTime', Sort.desc);
+      return query.addSortBy(r'isConfirmed', Sort.desc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> sortByOrderTimes() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByIsInvalid() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'orderTimes', Sort.asc);
+      return query.addSortBy(r'isInvalid', Sort.asc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> sortByOrderTimesDesc() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByIsInvalidDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'orderTimes', Sort.desc);
+      return query.addSortBy(r'isInvalid', Sort.desc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> sortByPickupCode() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByOrderedTimes() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'pickupCode', Sort.asc);
+      return query.addSortBy(r'orderedTimes', Sort.asc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> sortByPickupCodeDesc() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> sortByOrderedTimesDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'pickupCode', Sort.desc);
+      return query.addSortBy(r'orderedTimes', Sort.desc);
     });
   }
 }
 
 extension CustomerQuerySortThenBy
     on QueryBuilder<Customer, Customer, QSortThenBy> {
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByCompletedOrderTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'completedOrderTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy>
+      thenByCompletedOrderTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'completedOrderTime', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy>
+      thenByCustomerTraitsQuickNote() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerTraitsQuickNote', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy>
+      thenByCustomerTraitsQuickNoteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerTraitsQuickNote', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByFirstOrderTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'firstOrderTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByFirstOrderTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'firstOrderTime', Sort.desc);
+    });
+  }
+
   QueryBuilder<Customer, Customer, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -892,66 +1164,86 @@ extension CustomerQuerySortThenBy
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> thenByOrderTime() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByIsConfirmed() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'orderTime', Sort.asc);
+      return query.addSortBy(r'isConfirmed', Sort.asc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> thenByOrderTimeDesc() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByIsConfirmedDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'orderTime', Sort.desc);
+      return query.addSortBy(r'isConfirmed', Sort.desc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> thenByOrderTimes() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByIsInvalid() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'orderTimes', Sort.asc);
+      return query.addSortBy(r'isInvalid', Sort.asc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> thenByOrderTimesDesc() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByIsInvalidDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'orderTimes', Sort.desc);
+      return query.addSortBy(r'isInvalid', Sort.desc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> thenByPickupCode() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByOrderedTimes() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'pickupCode', Sort.asc);
+      return query.addSortBy(r'orderedTimes', Sort.asc);
     });
   }
 
-  QueryBuilder<Customer, Customer, QAfterSortBy> thenByPickupCodeDesc() {
+  QueryBuilder<Customer, Customer, QAfterSortBy> thenByOrderedTimesDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'pickupCode', Sort.desc);
+      return query.addSortBy(r'orderedTimes', Sort.desc);
     });
   }
 }
 
 extension CustomerQueryWhereDistinct
     on QueryBuilder<Customer, Customer, QDistinct> {
+  QueryBuilder<Customer, Customer, QDistinct> distinctByCompletedOrderTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'completedOrderTime');
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QDistinct> distinctByCustomerTraitsQuickNote(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'customerTraitsQuickNote',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Customer, Customer, QDistinct> distinctByFirstOrderTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'firstOrderTime');
+    });
+  }
+
   QueryBuilder<Customer, Customer, QDistinct> distinctByIsCompleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isCompleted');
     });
   }
 
-  QueryBuilder<Customer, Customer, QDistinct> distinctByOrderTime() {
+  QueryBuilder<Customer, Customer, QDistinct> distinctByIsConfirmed() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'orderTime');
+      return query.addDistinctBy(r'isConfirmed');
     });
   }
 
-  QueryBuilder<Customer, Customer, QDistinct> distinctByOrderTimes() {
+  QueryBuilder<Customer, Customer, QDistinct> distinctByIsInvalid() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'orderTimes');
+      return query.addDistinctBy(r'isInvalid');
     });
   }
 
-  QueryBuilder<Customer, Customer, QDistinct> distinctByPickupCode() {
+  QueryBuilder<Customer, Customer, QDistinct> distinctByOrderedTimes() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'pickupCode');
+      return query.addDistinctBy(r'orderedTimes');
     });
   }
 }
@@ -964,10 +1256,24 @@ extension CustomerQueryProperty
     });
   }
 
+  QueryBuilder<Customer, DateTime, QQueryOperations>
+      completedOrderTimeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'completedOrderTime');
+    });
+  }
+
   QueryBuilder<Customer, CustomerOrder, QQueryOperations>
       customerOrderProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'customerOrder');
+    });
+  }
+
+  QueryBuilder<Customer, String, QQueryOperations>
+      customerTraitsQuickNoteProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'customerTraitsQuickNote');
     });
   }
 
@@ -978,27 +1284,33 @@ extension CustomerQueryProperty
     });
   }
 
+  QueryBuilder<Customer, DateTime, QQueryOperations> firstOrderTimeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'firstOrderTime');
+    });
+  }
+
   QueryBuilder<Customer, bool, QQueryOperations> isCompletedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isCompleted');
     });
   }
 
-  QueryBuilder<Customer, DateTime, QQueryOperations> orderTimeProperty() {
+  QueryBuilder<Customer, bool, QQueryOperations> isConfirmedProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'orderTime');
+      return query.addPropertyName(r'isConfirmed');
     });
   }
 
-  QueryBuilder<Customer, int, QQueryOperations> orderTimesProperty() {
+  QueryBuilder<Customer, bool, QQueryOperations> isInvalidProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'orderTimes');
+      return query.addPropertyName(r'isInvalid');
     });
   }
 
-  QueryBuilder<Customer, int, QQueryOperations> pickupCodeProperty() {
+  QueryBuilder<Customer, int, QQueryOperations> orderedTimesProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'pickupCode');
+      return query.addPropertyName(r'orderedTimes');
     });
   }
 }
@@ -1014,14 +1326,19 @@ const CustomerUnitSchema = Schema(
   name: r'CustomerUnit',
   id: 1288013750335326809,
   properties: {
-    r'times2Count': PropertySchema(
+    r'getTotalCount': PropertySchema(
       id: 0,
-      name: r'times2Count',
+      name: r'getTotalCount',
+      type: IsarType.long,
+    ),
+    r'times2Counts': PropertySchema(
+      id: 1,
+      name: r'times2Counts',
       type: IsarType.objectList,
       target: r'Times2Count',
     ),
     r'unitId': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'unitId',
       type: IsarType.string,
     )
@@ -1038,11 +1355,11 @@ int _customerUnitEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
-  bytesCount += 3 + object.times2Count.length * 3;
+  bytesCount += 3 + object.times2Counts.length * 3;
   {
     final offsets = allOffsets[Times2Count]!;
-    for (var i = 0; i < object.times2Count.length; i++) {
-      final value = object.times2Count[i];
+    for (var i = 0; i < object.times2Counts.length; i++) {
+      final value = object.times2Counts[i];
       bytesCount += Times2CountSchema.estimateSize(value, offsets, allOffsets);
     }
   }
@@ -1061,13 +1378,14 @@ void _customerUnitSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
+  writer.writeLong(offsets[0], object.getTotalCount);
   writer.writeObjectList<Times2Count>(
-    offsets[0],
+    offsets[1],
     allOffsets,
     Times2CountSchema.serialize,
-    object.times2Count,
+    object.times2Counts,
   );
-  writer.writeString(offsets[1], object.unitId);
+  writer.writeString(offsets[2], object.unitId);
 }
 
 CustomerUnit _customerUnitDeserialize(
@@ -1077,14 +1395,14 @@ CustomerUnit _customerUnitDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = CustomerUnit();
-  object.times2Count = reader.readObjectList<Times2Count>(
-        offsets[0],
+  object.times2Counts = reader.readObjectList<Times2Count>(
+        offsets[1],
         Times2CountSchema.deserialize,
         allOffsets,
         Times2Count(),
       ) ??
       [];
-  object.unitId = reader.readStringOrNull(offsets[1]);
+  object.unitId = reader.readStringOrNull(offsets[2]);
   return object;
 }
 
@@ -1096,6 +1414,8 @@ P _customerUnitDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
+      return (reader.readLong(offset)) as P;
+    case 1:
       return (reader.readObjectList<Times2Count>(
             offset,
             Times2CountSchema.deserialize,
@@ -1103,7 +1423,7 @@ P _customerUnitDeserializeProp<P>(
             Times2Count(),
           ) ??
           []) as P;
-    case 1:
+    case 2:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1113,10 +1433,66 @@ P _customerUnitDeserializeProp<P>(
 extension CustomerUnitQueryFilter
     on QueryBuilder<CustomerUnit, CustomerUnit, QFilterCondition> {
   QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      times2CountLengthEqualTo(int length) {
+      getTotalCountEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'getTotalCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      getTotalCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'getTotalCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      getTotalCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'getTotalCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      getTotalCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'getTotalCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
+      times2CountsLengthEqualTo(int length) {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'times2Count',
+        r'times2Counts',
         length,
         true,
         length,
@@ -1126,10 +1502,10 @@ extension CustomerUnitQueryFilter
   }
 
   QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      times2CountIsEmpty() {
+      times2CountsIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'times2Count',
+        r'times2Counts',
         0,
         true,
         0,
@@ -1139,10 +1515,10 @@ extension CustomerUnitQueryFilter
   }
 
   QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      times2CountIsNotEmpty() {
+      times2CountsIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'times2Count',
+        r'times2Counts',
         0,
         false,
         999999,
@@ -1152,13 +1528,13 @@ extension CustomerUnitQueryFilter
   }
 
   QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      times2CountLengthLessThan(
+      times2CountsLengthLessThan(
     int length, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'times2Count',
+        r'times2Counts',
         0,
         true,
         length,
@@ -1168,13 +1544,13 @@ extension CustomerUnitQueryFilter
   }
 
   QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      times2CountLengthGreaterThan(
+      times2CountsLengthGreaterThan(
     int length, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'times2Count',
+        r'times2Counts',
         length,
         include,
         999999,
@@ -1184,7 +1560,7 @@ extension CustomerUnitQueryFilter
   }
 
   QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      times2CountLengthBetween(
+      times2CountsLengthBetween(
     int lower,
     int upper, {
     bool includeLower = true,
@@ -1192,7 +1568,7 @@ extension CustomerUnitQueryFilter
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
-        r'times2Count',
+        r'times2Counts',
         lower,
         includeLower,
         upper,
@@ -1358,9 +1734,9 @@ extension CustomerUnitQueryFilter
 extension CustomerUnitQueryObject
     on QueryBuilder<CustomerUnit, CustomerUnit, QFilterCondition> {
   QueryBuilder<CustomerUnit, CustomerUnit, QAfterFilterCondition>
-      times2CountElement(FilterQuery<Times2Count> q) {
+      times2CountsElement(FilterQuery<Times2Count> q) {
     return QueryBuilder.apply(this, (query) {
-      return query.object(q, r'times2Count');
+      return query.object(q, r'times2Counts');
     });
   }
 }
@@ -1557,28 +1933,33 @@ const CustomerOrderSchema = Schema(
   name: r'CustomerOrder',
   id: 7813251628506524948,
   properties: {
-    r'orderTime': PropertySchema(
+    r'completedOrderTime': PropertySchema(
       id: 0,
-      name: r'orderTime',
+      name: r'completedOrderTime',
       type: IsarType.dateTime,
     ),
-    r'packPrice': PropertySchema(
+    r'extraPrice': PropertySchema(
       id: 1,
-      name: r'packPrice',
+      name: r'extraPrice',
       type: IsarType.double,
     ),
-    r'paidPrice': PropertySchema(
+    r'firstOrderTime': PropertySchema(
       id: 2,
+      name: r'firstOrderTime',
+      type: IsarType.dateTime,
+    ),
+    r'paidPrice': PropertySchema(
+      id: 3,
       name: r'paidPrice',
       type: IsarType.double,
     ),
     r'pickupCode': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'pickupCode',
       type: IsarType.long,
     ),
     r'tableNum': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'tableNum',
       type: IsarType.string,
     )
@@ -1605,11 +1986,12 @@ void _customerOrderSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeDateTime(offsets[0], object.orderTime);
-  writer.writeDouble(offsets[1], object.packPrice);
-  writer.writeDouble(offsets[2], object.paidPrice);
-  writer.writeLong(offsets[3], object.pickupCode);
-  writer.writeString(offsets[4], object.tableNum);
+  writer.writeDateTime(offsets[0], object.completedOrderTime);
+  writer.writeDouble(offsets[1], object.extraPrice);
+  writer.writeDateTime(offsets[2], object.firstOrderTime);
+  writer.writeDouble(offsets[3], object.paidPrice);
+  writer.writeLong(offsets[4], object.pickupCode);
+  writer.writeString(offsets[5], object.tableNum);
 }
 
 CustomerOrder _customerOrderDeserialize(
@@ -1619,11 +2001,12 @@ CustomerOrder _customerOrderDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = CustomerOrder();
-  object.orderTime = reader.readDateTime(offsets[0]);
-  object.packPrice = reader.readDouble(offsets[1]);
-  object.paidPrice = reader.readDouble(offsets[2]);
-  object.pickupCode = reader.readLong(offsets[3]);
-  object.tableNum = reader.readString(offsets[4]);
+  object.completedOrderTime = reader.readDateTime(offsets[0]);
+  object.extraPrice = reader.readDouble(offsets[1]);
+  object.firstOrderTime = reader.readDateTime(offsets[2]);
+  object.paidPrice = reader.readDouble(offsets[3]);
+  object.pickupCode = reader.readLong(offsets[4]);
+  object.tableNum = reader.readString(offsets[5]);
   return object;
 }
 
@@ -1639,10 +2022,12 @@ P _customerOrderDeserializeProp<P>(
     case 1:
       return (reader.readDouble(offset)) as P;
     case 2:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 3:
-      return (reader.readLong(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 4:
+      return (reader.readLong(offset)) as P;
+    case 5:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1652,45 +2037,45 @@ P _customerOrderDeserializeProp<P>(
 extension CustomerOrderQueryFilter
     on QueryBuilder<CustomerOrder, CustomerOrder, QFilterCondition> {
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      orderTimeEqualTo(DateTime value) {
+      completedOrderTimeEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'orderTime',
+        property: r'completedOrderTime',
         value: value,
       ));
     });
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      orderTimeGreaterThan(
+      completedOrderTimeGreaterThan(
     DateTime value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'orderTime',
+        property: r'completedOrderTime',
         value: value,
       ));
     });
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      orderTimeLessThan(
+      completedOrderTimeLessThan(
     DateTime value, {
     bool include = false,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'orderTime',
+        property: r'completedOrderTime',
         value: value,
       ));
     });
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      orderTimeBetween(
+      completedOrderTimeBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
@@ -1698,7 +2083,7 @@ extension CustomerOrderQueryFilter
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'orderTime',
+        property: r'completedOrderTime',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -1708,13 +2093,13 @@ extension CustomerOrderQueryFilter
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      packPriceEqualTo(
+      extraPriceEqualTo(
     double value, {
     double epsilon = Query.epsilon,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'packPrice',
+        property: r'extraPrice',
         value: value,
         epsilon: epsilon,
       ));
@@ -1722,7 +2107,7 @@ extension CustomerOrderQueryFilter
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      packPriceGreaterThan(
+      extraPriceGreaterThan(
     double value, {
     bool include = false,
     double epsilon = Query.epsilon,
@@ -1730,7 +2115,7 @@ extension CustomerOrderQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'packPrice',
+        property: r'extraPrice',
         value: value,
         epsilon: epsilon,
       ));
@@ -1738,7 +2123,7 @@ extension CustomerOrderQueryFilter
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      packPriceLessThan(
+      extraPriceLessThan(
     double value, {
     bool include = false,
     double epsilon = Query.epsilon,
@@ -1746,7 +2131,7 @@ extension CustomerOrderQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'packPrice',
+        property: r'extraPrice',
         value: value,
         epsilon: epsilon,
       ));
@@ -1754,7 +2139,7 @@ extension CustomerOrderQueryFilter
   }
 
   QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
-      packPriceBetween(
+      extraPriceBetween(
     double lower,
     double upper, {
     bool includeLower = true,
@@ -1763,12 +2148,68 @@ extension CustomerOrderQueryFilter
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'packPrice',
+        property: r'extraPrice',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
         epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
+      firstOrderTimeEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'firstOrderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
+      firstOrderTimeGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'firstOrderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
+      firstOrderTimeLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'firstOrderTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CustomerOrder, CustomerOrder, QAfterFilterCondition>
+      firstOrderTimeBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'firstOrderTime',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
