@@ -3,6 +3,37 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
+class DialogWidget extends StatelessWidget {
+  const DialogWidget({
+    super.key,
+    required this.columnChildren,
+    this.crossAxisAlignment,
+  });
+
+  final List<Widget> columnChildren;
+  final CrossAxisAlignment? crossAxisAlignment;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(50, 20, 50, 20),
+        child: IntrinsicWidth(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: crossAxisAlignment ?? CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...columnChildren,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class OkCancelDialogWidget extends StatelessWidget {
   const OkCancelDialogWidget({super.key, this.onOk, this.onCancel});
 

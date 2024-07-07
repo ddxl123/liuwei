@@ -44,6 +44,7 @@ dependencies:
   flutter_cache_manager: ^3.3.2
   flutter_smart_dialog: ^4.9.7+7
   font_awesome_flutter: ^10.7.0
+  printing: ^5.13.1
 
 dev_dependencies:
   flutter_test:

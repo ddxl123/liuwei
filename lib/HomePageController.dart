@@ -48,7 +48,9 @@ class HomePageController extends GetxController {
   /// 防止 [CustomerPage] 多次打开
   final isCustomerAdding = false.obs;
 
-  final ScrollController scrollController = ScrollController();
+  final scrollController = ScrollController();
+
+  final merchantPasswordTextEditingController = TextEditingController();
 
   final customersSortType = CustomersSortType.timeDesc.obs;
 

@@ -28,14 +28,25 @@ const MerchantConfigSchema = CollectionSchema(
       name: r'isShowImage',
       type: IsarType.bool,
     ),
-    r'pickupCode': PropertySchema(
+    r'merchantName': PropertySchema(
       id: 2,
+      name: r'merchantName',
+      type: IsarType.string,
+    ),
+    r'pickupCode': PropertySchema(
+      id: 3,
       name: r'pickupCode',
       type: IsarType.object,
       target: r'PickupCode',
     ),
+    r'printContents': PropertySchema(
+      id: 4,
+      name: r'printContents',
+      type: IsarType.byteList,
+      enumMap: _MerchantConfigprintContentsEnumValueMap,
+    ),
     r'tableNums': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'tableNums',
       type: IsarType.stringList,
     )
@@ -74,6 +85,7 @@ int _merchantConfigEstimateSize(
           FatherCateGorySchema.estimateSize(value, offsets, allOffsets);
     }
   }
+  bytesCount += 3 + object.merchantName.length * 3;
   {
     final value = object.pickupCode;
     if (value != null) {
@@ -82,6 +94,7 @@ int _merchantConfigEstimateSize(
               value, allOffsets[PickupCode]!, allOffsets);
     }
   }
+  bytesCount += 3 + object.printContents.length;
   {
     final list = object.tableNums;
     if (list != null) {
@@ -110,13 +123,16 @@ void _merchantConfigSerialize(
     object.fatherCateGorys,
   );
   writer.writeBool(offsets[1], object.isShowImage);
+  writer.writeString(offsets[2], object.merchantName);
   writer.writeObject<PickupCode>(
-    offsets[2],
+    offsets[3],
     allOffsets,
     PickupCodeSchema.serialize,
     object.pickupCode,
   );
-  writer.writeStringList(offsets[3], object.tableNums);
+  writer.writeByteList(
+      offsets[4], object.printContents.map((e) => e.index).toList());
+  writer.writeStringList(offsets[5], object.tableNums);
 }
 
 MerchantConfig _merchantConfigDeserialize(
@@ -135,12 +151,20 @@ MerchantConfig _merchantConfigDeserialize(
       [];
   object.id = id;
   object.isShowImage = reader.readBool(offsets[1]);
+  object.merchantName = reader.readString(offsets[2]);
   object.pickupCode = reader.readObjectOrNull<PickupCode>(
-    offsets[2],
+    offsets[3],
     PickupCodeSchema.deserialize,
     allOffsets,
   );
-  object.tableNums = reader.readStringList(offsets[3]);
+  object.printContents = reader
+          .readByteList(offsets[4])
+          ?.map((e) =>
+              _MerchantConfigprintContentsValueEnumMap[e] ??
+              PrintContent.merchantName)
+          .toList() ??
+      [];
+  object.tableNums = reader.readStringList(offsets[5]);
   return object;
 }
 
@@ -162,17 +186,48 @@ P _merchantConfigDeserializeProp<P>(
     case 1:
       return (reader.readBool(offset)) as P;
     case 2:
+      return (reader.readString(offset)) as P;
+    case 3:
       return (reader.readObjectOrNull<PickupCode>(
         offset,
         PickupCodeSchema.deserialize,
         allOffsets,
       )) as P;
-    case 3:
+    case 4:
+      return (reader
+              .readByteList(offset)
+              ?.map((e) =>
+                  _MerchantConfigprintContentsValueEnumMap[e] ??
+                  PrintContent.merchantName)
+              .toList() ??
+          []) as P;
+    case 5:
       return (reader.readStringList(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
 }
+
+const _MerchantConfigprintContentsEnumValueMap = {
+  'merchantName': 0,
+  'firstOrderTime': 1,
+  'completedOrderTime': 2,
+  'tableNum': 3,
+  'pickupCode': 4,
+  'extraPrice': 5,
+  'paidPrice': 6,
+  'shouldPrice': 7,
+};
+const _MerchantConfigprintContentsValueEnumMap = {
+  0: PrintContent.merchantName,
+  1: PrintContent.firstOrderTime,
+  2: PrintContent.completedOrderTime,
+  3: PrintContent.tableNum,
+  4: PrintContent.pickupCode,
+  5: PrintContent.extraPrice,
+  6: PrintContent.paidPrice,
+  7: PrintContent.shouldPrice,
+};
 
 Id _merchantConfigGetId(MerchantConfig object) {
   return object.id;
@@ -425,6 +480,142 @@ extension MerchantConfigQueryFilter
   }
 
   QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      merchantNameEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'merchantName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      merchantNameGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'merchantName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      merchantNameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'merchantName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      merchantNameBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'merchantName',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      merchantNameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'merchantName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      merchantNameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'merchantName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      merchantNameContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'merchantName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      merchantNameMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'merchantName',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      merchantNameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'merchantName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      merchantNameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'merchantName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
       pickupCodeIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -439,6 +630,151 @@ extension MerchantConfigQueryFilter
       return query.addFilterCondition(const FilterCondition.isNotNull(
         property: r'pickupCode',
       ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      printContentsElementEqualTo(PrintContent value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'printContents',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      printContentsElementGreaterThan(
+    PrintContent value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'printContents',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      printContentsElementLessThan(
+    PrintContent value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'printContents',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      printContentsElementBetween(
+    PrintContent lower,
+    PrintContent upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'printContents',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      printContentsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'printContents',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      printContentsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'printContents',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      printContentsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'printContents',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      printContentsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'printContents',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      printContentsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'printContents',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterFilterCondition>
+      printContentsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'printContents',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
     });
   }
 
@@ -721,6 +1057,20 @@ extension MerchantConfigQuerySortBy
       return query.addSortBy(r'isShowImage', Sort.desc);
     });
   }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterSortBy>
+      sortByMerchantName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'merchantName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterSortBy>
+      sortByMerchantNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'merchantName', Sort.desc);
+    });
+  }
 }
 
 extension MerchantConfigQuerySortThenBy
@@ -750,6 +1100,20 @@ extension MerchantConfigQuerySortThenBy
       return query.addSortBy(r'isShowImage', Sort.desc);
     });
   }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterSortBy>
+      thenByMerchantName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'merchantName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QAfterSortBy>
+      thenByMerchantNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'merchantName', Sort.desc);
+    });
+  }
 }
 
 extension MerchantConfigQueryWhereDistinct
@@ -758,6 +1122,20 @@ extension MerchantConfigQueryWhereDistinct
       distinctByIsShowImage() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isShowImage');
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QDistinct>
+      distinctByMerchantName({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'merchantName', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<MerchantConfig, MerchantConfig, QDistinct>
+      distinctByPrintContents() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'printContents');
     });
   }
 
@@ -790,10 +1168,24 @@ extension MerchantConfigQueryProperty
     });
   }
 
+  QueryBuilder<MerchantConfig, String, QQueryOperations>
+      merchantNameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'merchantName');
+    });
+  }
+
   QueryBuilder<MerchantConfig, PickupCode?, QQueryOperations>
       pickupCodeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'pickupCode');
+    });
+  }
+
+  QueryBuilder<MerchantConfig, List<PrintContent>, QQueryOperations>
+      printContentsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'printContents');
     });
   }
 

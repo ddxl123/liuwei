@@ -55,277 +55,394 @@ class MerchantConfigPage extends StatelessWidget {
                   Scrollbar(
                     controller: merchantConfigPageController.scrollController,
                     thumbVisibility: true,
-                    child: CustomScrollView(
-                      controller: merchantConfigPageController.scrollController,
-                      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                      shrinkWrap: true,
-                      slivers: [
-                        SliverToBoxAdapter(child: SizedBox(height: 10)),
-                        SliverToBoxAdapter(
-                          child: Row(
-                            children: [
-                              SizedBox(width: 10),
-                              TextButton(
-                                child: const Text("+ 添加大类", style: TextStyle(color: Colors.blue, fontSize: 20)),
-                                onPressed: () async {
-                                  merchantConfigPageController.merchantConfig.value!.fatherCateGorys.add(FatherCateGory());
-                                  merchantConfigPageController.merchantConfig.refresh();
-                                },
+                    child: Stack(
+                      children: [
+                        CustomScrollView(
+                          controller: merchantConfigPageController.scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                          shrinkWrap: true,
+                          slivers: [
+                            SliverToBoxAdapter(child: SizedBox(height: 10)),
+                            SliverToBoxAdapter(
+                              child: Row(
+                                children: [
+                                  SizedBox(width: 10),
+                                  TextButton(
+                                    child: const Text("+ 添加大类", style: TextStyle(color: Colors.blue, fontSize: 20)),
+                                    onPressed: () async {
+                                      merchantConfigPageController.merchantConfig.value!.fatherCateGorys.add(FatherCateGory());
+                                      merchantConfigPageController.merchantConfig.refresh();
+                                    },
+                                  ),
+                                  TextButton(
+                                    child: Text("查看移除历史"),
+                                    onPressed: () async {
+                                      SmartDialog.showToast("获取中...");
+                                      await merchantConfigPageController.refreshRemovedUnits();
+                                      SmartDialog.showToast("获取成功");
+                                      SmartDialog.show(
+                                        builder: (_) {
+                                          return DialogWidget(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            columnChildren: [
+                                              ...merchantConfigPageController.removedUnits.map(
+                                                (e) {
+                                                  return Text("${e.removeTime.removeMill} ${e.fatherCateGoryName}-${e.subCateGoryName}-${e.name}-￥${e.price}");
+                                                },
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  SizedBox(width: 10),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                        Obx(
-                          () => SliverList(
-                            delegate: SliverChildListDelegate(
-                              merchantConfigPageController.merchantConfig.value!.fatherCateGorys
-                                  .map(
-                                    (e) => _fatherSingleCard(fatherCateGory: e),
-                                  )
-                                  .toList(),
                             ),
+                            Obx(
+                              () => SliverList(
+                                delegate: SliverChildListDelegate(
+                                  merchantConfigPageController.merchantConfig.value!.fatherCateGorys.reversed
+                                      .map(
+                                        (e) => _fatherSingleCard(fatherCateGory: e),
+                                      )
+                                      .toList(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Positioned(
+                          top: 10,
+                          right: 20,
+                          child: ElevatedButton(
+                            style: ButtonStyle(backgroundColor: WidgetStatePropertyAll(Colors.deepPurple.withOpacity(0.8))),
+                            child: Text("全部折叠", style: TextStyle(color: Colors.white)),
+                            onPressed: () {
+                              merchantConfigPageController.hideList.clear();
+                              merchantConfigPageController.hideList.addAll(merchantConfigPageController.merchantConfig.value!.fatherCateGorys.map((f) => f.id));
+                              merchantConfigPageController.hideList.refresh();
+                            },
                           ),
                         ),
                       ],
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: EdgeInsets.all(10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text("桌号配置：  ", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                                    Text("是否启用？"),
-                                    Obx(
-                                      () => Checkbox(
-                                        value: merchantConfigPageController.merchantConfig.value!.tableNums != null,
-                                        onChanged: (v) {
-                                          merchantConfigPageController.merchantConfig.value!.tableNums = v == true ? [] : null;
-                                          merchantConfigPageController.merchantConfig.refresh();
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    Text("配置结果测试 —— ", style: TextStyle(fontSize: 20, color: Colors.blue)),
-                                    Obx(
-                                      () {
-                                        if (merchantConfigPageController.merchantConfig.value!.tableNums == null) return Container();
-                                        final tms = merchantConfigPageController.merchantConfig.value!.tableNums!.toList();
-                                        if (tms.isEmpty) {
-                                          tms.add("未设置");
-                                        }
-                                        return DropdownMenu(
-                                          dropdownMenuEntries: tms.map(
-                                            (e) {
-                                              return DropdownMenuEntry<String>(value: e, label: e);
-                                            },
-                                          ).toList(),
-                                          initialSelection: tms.first,
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                                Obx(
-                                  () {
-                                    if (merchantConfigPageController.merchantConfig.value!.tableNums == null) return Container();
-
-                                    return TextField(
-                                      controller: merchantConfigPageController.tableNumTextEditingController,
+                    padding: EdgeInsets.zero,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Card(
+                            margin: EdgeInsets.fromLTRB(10, 20, 20, 0),
+                            child: Padding(
+                              padding: EdgeInsets.all(10),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text("商家名称：", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: merchantConfigPageController.merchantNameTextEditingController,
+                                      decoration: InputDecoration(hintText: "请输入..."),
                                       onChanged: (v) {
-                                        merchantConfigPageController.merchantConfig.value!.tableNums = v
-                                            .split(merchantConfigPageController.tableNumSplit)
-                                            .map((e) => e.trim())
-                                            .toList()
-                                          ..removeWhere((e) => e.trim() == "");
+                                        merchantConfigPageController.merchantConfig.value!.merchantName = v;
                                         merchantConfigPageController.merchantConfig.refresh();
                                       },
-                                      decoration: InputDecoration(hintText: "在此输入..."),
-                                    );
-                                  },
-                                ),
-                                Text("使用连续的两个空格进行分割，注意是连续两个空格\"  \"，而非一个空格\" \"。"),
-                                Text("例如：1  2  3  桌号4  桌号5  桌号6  A区  B区  C区  D区-1号  D区-2号  E区-1号"),
-                              ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        SizedBox(height: 20),
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: EdgeInsets.all(10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text("取餐号配置：  ", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                                    Text("是否启用？"),
-                                    Obx(
-                                      () => Checkbox(
-                                        value: merchantConfigPageController.merchantConfig.value!.pickupCode != null,
-                                        onChanged: (v) {
-                                          merchantConfigPageController.merchantConfig.value!.pickupCode = v == true ? PickupCode() : null;
-                                          merchantConfigPageController.merchantConfig.refresh();
+                          Card(
+                            margin: EdgeInsets.fromLTRB(10, 20, 20, 0),
+                            child: Padding(
+                              padding: EdgeInsets.all(10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text("桌号配置：  ", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                      Text("是否启用？"),
+                                      Obx(
+                                        () => Checkbox(
+                                          value: merchantConfigPageController.merchantConfig.value!.tableNums != null,
+                                          onChanged: (v) {
+                                            merchantConfigPageController.merchantConfig.value!.tableNums = v == true ? [] : null;
+                                            merchantConfigPageController.merchantConfig.refresh();
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Text("配置结果测试 —— ", style: TextStyle(fontSize: 20, color: Colors.blue)),
+                                      Obx(
+                                        () {
+                                          if (merchantConfigPageController.merchantConfig.value!.tableNums == null) return Container();
+                                          final tms = merchantConfigPageController.merchantConfig.value!.tableNums!.toList();
+                                          if (tms.isEmpty) {
+                                            tms.add("未设置");
+                                          }
+                                          return DropdownMenu(
+                                            dropdownMenuEntries: tms.map(
+                                              (e) {
+                                                return DropdownMenuEntry<String>(value: e, label: e);
+                                              },
+                                            ).toList(),
+                                            initialSelection: tms.first,
+                                          );
                                         },
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    Text("取餐号始终以递增的方式出号"),
-                                  ],
-                                ),
-                                SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Icon(Icons.circle, size: 10),
-                                    Text(" 是否在每天凌晨 4:00 过后，重新从 1 开始出号：", style: TextStyle(fontSize: 18)),
-                                    Obx(() {
-                                      if (merchantConfigPageController.merchantConfig.value!.pickupCode == null) return Container();
-                                      return Checkbox(
-                                        value: merchantConfigPageController.merchantConfig.value!.pickupCode!.isResetAfter4,
+                                    ],
+                                  ),
+                                  Obx(
+                                    () {
+                                      if (merchantConfigPageController.merchantConfig.value!.tableNums == null) return Container();
+
+                                      return TextField(
+                                        controller: merchantConfigPageController.tableNumTextEditingController,
                                         onChanged: (v) {
-                                          merchantConfigPageController.merchantConfig.value!.pickupCode!.isResetAfter4 = v!;
+                                          merchantConfigPageController.merchantConfig.value!.tableNums = v
+                                              .split(merchantConfigPageController.tableNumSplit)
+                                              .map((e) => e.trim())
+                                              .toList()
+                                            ..removeWhere((e) => e.trim() == "");
                                           merchantConfigPageController.merchantConfig.refresh();
                                         },
+                                        decoration: InputDecoration(hintText: "在此输入..."),
                                       );
-                                    }),
-                                  ],
-                                ),
-                                SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Icon(Icons.circle, size: 10),
-                                    Text(" 下一次取餐号为：", style: TextStyle(fontSize: 18)),
-                                    Obx(() {
-                                      if (merchantConfigPageController.merchantConfig.value!.pickupCode == null) return Container();
-                                      return Text(
-                                        "${merchantConfigPageController.merchantConfig.value!.pickupCode!.nextCode}",
-                                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
-                                      );
-                                    }),
-                                    SizedBox(width: 10),
-                                    Obx(
-                                      () {
+                                    },
+                                  ),
+                                  Text("使用连续的两个空格进行分割，注意是连续两个空格\"  \"，而非一个空格\" \"。"),
+                                  Text("例如：1  2  3  桌号4  桌号5  桌号6  A区  B区  C区  D区-1号  D区-2号  E区-1号"),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Card(
+                            margin: EdgeInsets.fromLTRB(10, 20, 20, 0),
+                            child: Padding(
+                              padding: EdgeInsets.all(10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text("取餐号配置：  ", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                      Text("是否启用？"),
+                                      Obx(
+                                        () => Checkbox(
+                                          value: merchantConfigPageController.merchantConfig.value!.pickupCode != null,
+                                          onChanged: (v) {
+                                            merchantConfigPageController.merchantConfig.value!.pickupCode = v == true ? PickupCode() : null;
+                                            merchantConfigPageController.merchantConfig.refresh();
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Text("取餐号始终以递增的方式出号"),
+                                    ],
+                                  ),
+                                  SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.circle, size: 10),
+                                      Text(" 是否在每天凌晨 4:00 过后，重新从 1 开始出号：", style: TextStyle(fontSize: 18)),
+                                      Obx(() {
                                         if (merchantConfigPageController.merchantConfig.value!.pickupCode == null) return Container();
-                                        return TextButton(
-                                          child: Text("重置为 1"),
-                                          onPressed: () {
-                                            SmartDialog.show(
-                                              builder: (_) {
-                                                return Card(
-                                                  child: Padding(
-                                                    padding: EdgeInsets.all(20),
-                                                    child: Column(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        Text("确认重置为 1？", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                                                        SizedBox(height: 20),
-                                                        Row(
-                                                          mainAxisSize: MainAxisSize.min,
-                                                          children: [
-                                                            TextButton(
-                                                              child: Text("返回", style: TextStyle(fontSize: 20)),
-                                                              onPressed: () {
-                                                                SmartDialog.dismiss(status: SmartStatus.dialog);
-                                                              },
-                                                            ),
-                                                            SizedBox(width: 20),
-                                                            TextButton(
-                                                              child: Text("重置", style: TextStyle(color: Colors.red, fontSize: 20)),
-                                                              onPressed: () async {
-                                                                merchantConfigPageController.merchantConfig.value!.pickupCode!.nextCode = 1;
-                                                                merchantConfigPageController.merchantConfig.refresh();
-                                                                SmartDialog.dismiss(status: SmartStatus.dialog);
-                                                              },
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                            );
+                                        return Checkbox(
+                                          value: merchantConfigPageController.merchantConfig.value!.pickupCode!.isResetAfter4,
+                                          onChanged: (v) {
+                                            merchantConfigPageController.merchantConfig.value!.pickupCode!.isResetAfter4 = v!;
+                                            merchantConfigPageController.merchantConfig.refresh();
                                           },
                                         );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 10),
-                                Obx(
-                                  () {
-                                    if (merchantConfigPageController.merchantConfig.value!.pickupCode == null) return Container();
-                                    return Row(
-                                      children: [
-                                        Icon(Icons.circle, size: 10),
-                                        Text(" 设备号：", style: TextStyle(fontSize: 18)),
-                                        SizedBox(
-                                          width: 100,
-                                          child: TextField(
-                                            controller: merchantConfigPageController.deviceCodeTextEditingController,
-                                            onChanged: (v) {
-                                              merchantConfigPageController.merchantConfig.value!.pickupCode!.deviceCode = int.tryParse(v) ?? 0;
-                                              merchantConfigPageController.merchantConfig.refresh();
+                                      }),
+                                    ],
+                                  ),
+                                  SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.circle, size: 10),
+                                      Text(" 下一次取餐号为：", style: TextStyle(fontSize: 18)),
+                                      Obx(() {
+                                        if (merchantConfigPageController.merchantConfig.value!.pickupCode == null) return Container();
+                                        return Text(
+                                          "${merchantConfigPageController.merchantConfig.value!.pickupCode!.nextCode}",
+                                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+                                        );
+                                      }),
+                                      SizedBox(width: 10),
+                                      Obx(
+                                        () {
+                                          if (merchantConfigPageController.merchantConfig.value!.pickupCode == null) return Container();
+                                          return TextButton(
+                                            child: Text("重置为 1"),
+                                            onPressed: () {
+                                              SmartDialog.show(
+                                                builder: (_) {
+                                                  return Card(
+                                                    child: Padding(
+                                                      padding: EdgeInsets.all(20),
+                                                      child: Column(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Text("确认重置为 1？", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                                                          SizedBox(height: 20),
+                                                          Row(
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              TextButton(
+                                                                child: Text("返回", style: TextStyle(fontSize: 20)),
+                                                                onPressed: () {
+                                                                  SmartDialog.dismiss(status: SmartStatus.dialog);
+                                                                },
+                                                              ),
+                                                              SizedBox(width: 20),
+                                                              TextButton(
+                                                                child: Text("重置", style: TextStyle(color: Colors.red, fontSize: 20)),
+                                                                onPressed: () async {
+                                                                  merchantConfigPageController.merchantConfig.value!.pickupCode!.nextCode = 1;
+                                                                  merchantConfigPageController.merchantConfig.refresh();
+                                                                  SmartDialog.dismiss(status: SmartStatus.dialog);
+                                                                },
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              );
                                             },
-                                            keyboardType: TextInputType.numberWithOptions(signed: true),
-                                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Text("店内多台出餐设备使用\"设备号-餐号\"作为取餐号确保唯一性，单一设备时仅用\"餐号\"。"),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        Card(
-                          margin: EdgeInsets.zero,
-                          child: Padding(
-                            padding: EdgeInsets.all(10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text("是否启用菜品图片：  ", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                                    Obx(
-                                      () => Checkbox(
-                                        value: merchantConfigPageController.merchantConfig.value!.isShowImage,
-                                        onChanged: (v) {
-                                          merchantConfigPageController.merchantConfig.value!.isShowImage = v!;
-                                          merchantConfigPageController.merchantConfig.refresh();
+                                          );
                                         },
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                    ],
+                                  ),
+                                  SizedBox(height: 10),
+                                  Obx(
+                                    () {
+                                      if (merchantConfigPageController.merchantConfig.value!.pickupCode == null) return Container();
+                                      return Row(
+                                        children: [
+                                          Icon(Icons.circle, size: 10),
+                                          Text(" 设备号：", style: TextStyle(fontSize: 18)),
+                                          SizedBox(
+                                            width: 100,
+                                            child: TextField(
+                                              controller: merchantConfigPageController.deviceCodeTextEditingController,
+                                              onChanged: (v) {
+                                                merchantConfigPageController.merchantConfig.value!.pickupCode!.deviceCode = int.tryParse(v) ?? 0;
+                                                merchantConfigPageController.merchantConfig.refresh();
+                                              },
+                                              keyboardType: TextInputType.numberWithOptions(signed: true),
+                                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Text("店内多台出餐设备使用\"设备号-餐号\"作为取餐号确保唯一性，单一设备时仅用\"餐号\"。"),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          Card(
+                            margin: EdgeInsets.fromLTRB(10, 20, 20, 0),
+                            child: Padding(
+                              padding: EdgeInsets.all(10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text("是否启用菜品图片：  ", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                      Obx(
+                                        () => Checkbox(
+                                          value: merchantConfigPageController.merchantConfig.value!.isShowImage,
+                                          onChanged: (v) {
+                                            merchantConfigPageController.merchantConfig.value!.isShowImage = v!;
+                                            merchantConfigPageController.merchantConfig.refresh();
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Card(
+                            margin: EdgeInsets.fromLTRB(10, 20, 20, 0),
+                            child: Padding(
+                              padding: EdgeInsets.all(10),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text("小票打印选项：", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                      TextButton(
+                                        child: Text("查看示例", style: TextStyle(decoration: TextDecoration.underline)),
+                                        onPressed: () {
+                                          merchantConfigPageController.printTest(context: context);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  Obx(
+                                    () {
+                                      return Wrap(
+                                        children: [
+                                          ...PrintContent.values.map(
+                                            (pc) {
+                                              final isContains = merchantConfigPageController.merchantConfig.value!.printContents.contains(pc);
+                                              return Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(pc.text),
+                                                  Checkbox(
+                                                    value: isContains,
+                                                    onChanged: (v) {
+                                                      if (isContains) {
+                                                        merchantConfigPageController.merchantConfig.value!.printContents.remove(pc);
+                                                      } else {
+                                                        merchantConfigPageController.merchantConfig.value!.printContents.add(pc);
+                                                      }
+                                                      merchantConfigPageController.merchantConfig.refresh();
+                                                    },
+                                                  ),
+                                                  SizedBox(width: 20),
+                                                ],
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 50),
+                        ],
+                      ),
                     ),
                   ),
                   Padding(
@@ -402,6 +519,18 @@ class MerchantConfigPage extends StatelessWidget {
                     },
                   ),
                 ),
+                Obx(
+                  () => TextButton(
+                    onPressed: () {
+                      if (merchantConfigPageController.hideList.contains(fatherCateGory.id)) {
+                        merchantConfigPageController.hideList.remove(fatherCateGory.id);
+                      } else {
+                        merchantConfigPageController.hideList.add(fatherCateGory.id);
+                      }
+                    },
+                    child: merchantConfigPageController.hideList.contains(fatherCateGory.id) ? Text("点击展开") : Text("点击折叠"),
+                  ),
+                ),
               ],
             ),
             SizedBox(height: 10),
@@ -416,19 +545,6 @@ class MerchantConfigPage extends StatelessWidget {
                           merchantConfigPageController.merchantConfig.refresh();
                         },
                       ),
-                Spacer(),
-                Obx(
-                  () => TextButton(
-                    onPressed: () {
-                      if (merchantConfigPageController.hideList.contains(fatherCateGory.id)) {
-                        merchantConfigPageController.hideList.remove(fatherCateGory.id);
-                      } else {
-                        merchantConfigPageController.hideList.add(fatherCateGory.id);
-                      }
-                    },
-                    child: merchantConfigPageController.hideList.contains(fatherCateGory.id) ? Text("点击展开") : Text("点击折叠"),
-                  ),
-                ),
               ],
             ),
             merchantConfigPageController.hideList.contains(fatherCateGory.id)

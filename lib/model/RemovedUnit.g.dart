@@ -32,13 +32,18 @@ const RemovedUnitSchema = CollectionSchema(
       name: r'price',
       type: IsarType.double,
     ),
-    r'subCateGoryName': PropertySchema(
+    r'removeTime': PropertySchema(
       id: 3,
+      name: r'removeTime',
+      type: IsarType.dateTime,
+    ),
+    r'subCateGoryName': PropertySchema(
+      id: 4,
       name: r'subCateGoryName',
       type: IsarType.string,
     ),
     r'unitId': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'unitId',
       type: IsarType.string,
     )
@@ -84,8 +89,9 @@ void _removedUnitSerialize(
   writer.writeString(offsets[0], object.fatherCateGoryName);
   writer.writeString(offsets[1], object.name);
   writer.writeDouble(offsets[2], object.price);
-  writer.writeString(offsets[3], object.subCateGoryName);
-  writer.writeString(offsets[4], object.unitId);
+  writer.writeDateTime(offsets[3], object.removeTime);
+  writer.writeString(offsets[4], object.subCateGoryName);
+  writer.writeString(offsets[5], object.unitId);
 }
 
 RemovedUnit _removedUnitDeserialize(
@@ -99,8 +105,9 @@ RemovedUnit _removedUnitDeserialize(
   object.id = id;
   object.name = reader.readString(offsets[1]);
   object.price = reader.readDouble(offsets[2]);
-  object.subCateGoryName = reader.readString(offsets[3]);
-  object.unitId = reader.readStringOrNull(offsets[4]);
+  object.removeTime = reader.readDateTime(offsets[3]);
+  object.subCateGoryName = reader.readString(offsets[4]);
+  object.unitId = reader.readStringOrNull(offsets[5]);
   return object;
 }
 
@@ -118,8 +125,10 @@ P _removedUnitDeserializeProp<P>(
     case 2:
       return (reader.readDouble(offset)) as P;
     case 3:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 4:
+      return (reader.readString(offset)) as P;
+    case 5:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -603,6 +612,62 @@ extension RemovedUnitQueryFilter
   }
 
   QueryBuilder<RemovedUnit, RemovedUnit, QAfterFilterCondition>
+      removeTimeEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'removeTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<RemovedUnit, RemovedUnit, QAfterFilterCondition>
+      removeTimeGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'removeTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<RemovedUnit, RemovedUnit, QAfterFilterCondition>
+      removeTimeLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'removeTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<RemovedUnit, RemovedUnit, QAfterFilterCondition>
+      removeTimeBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'removeTime',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<RemovedUnit, RemovedUnit, QAfterFilterCondition>
       subCateGoryNameEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -936,6 +1001,18 @@ extension RemovedUnitQuerySortBy
     });
   }
 
+  QueryBuilder<RemovedUnit, RemovedUnit, QAfterSortBy> sortByRemoveTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'removeTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<RemovedUnit, RemovedUnit, QAfterSortBy> sortByRemoveTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'removeTime', Sort.desc);
+    });
+  }
+
   QueryBuilder<RemovedUnit, RemovedUnit, QAfterSortBy> sortBySubCateGoryName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'subCateGoryName', Sort.asc);
@@ -1014,6 +1091,18 @@ extension RemovedUnitQuerySortThenBy
     });
   }
 
+  QueryBuilder<RemovedUnit, RemovedUnit, QAfterSortBy> thenByRemoveTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'removeTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<RemovedUnit, RemovedUnit, QAfterSortBy> thenByRemoveTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'removeTime', Sort.desc);
+    });
+  }
+
   QueryBuilder<RemovedUnit, RemovedUnit, QAfterSortBy> thenBySubCateGoryName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'subCateGoryName', Sort.asc);
@@ -1063,6 +1152,12 @@ extension RemovedUnitQueryWhereDistinct
     });
   }
 
+  QueryBuilder<RemovedUnit, RemovedUnit, QDistinct> distinctByRemoveTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'removeTime');
+    });
+  }
+
   QueryBuilder<RemovedUnit, RemovedUnit, QDistinct> distinctBySubCateGoryName(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1103,6 +1198,12 @@ extension RemovedUnitQueryProperty
   QueryBuilder<RemovedUnit, double, QQueryOperations> priceProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'price');
+    });
+  }
+
+  QueryBuilder<RemovedUnit, DateTime, QQueryOperations> removeTimeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'removeTime');
     });
   }
 

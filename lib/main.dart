@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
@@ -5,7 +7,9 @@ import 'package:isar/isar.dart';
 import 'package:liuwei/HomePage.dart';
 import 'package:liuwei/MerchantConfigPage.dart';
 import 'package:liuwei/MerchantConfigPageController.dart';
+import 'package:liuwei/OkCancelDialogWidget.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 import 'HomePageController.dart';
 import 'model/isarSchemas.dart';
@@ -70,6 +74,7 @@ class _MyHomePageState extends State<MyHomePage> {
         } else if (snapshot.connectionState != ConnectionState.done) {
           return Material(child: const Center(child: Text("加载中...")));
         }
+        final customerPageController = Get.find<HomePageController>();
         return Scaffold(
           appBar: AppBar(
             backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -80,8 +85,53 @@ class _MyHomePageState extends State<MyHomePage> {
                   children: [Icon(Icons.settings), Text("商家配置")],
                 ),
                 onPressed: () {
-                  Get.to(() => MerchantConfigPage());
-                  Get.find<MerchantConfigPageController>().refreshMerchantConfig();
+                  SmartDialog.show(
+                    builder: (_) => DialogWidget(
+                      columnChildren: [
+                        Text("请输入商家密码", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        TextField(
+                          controller: customerPageController.merchantPasswordTextEditingController,
+                          decoration: InputDecoration(hintText: "请输入..."),
+                        ),
+                        SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              child: Text("返回"),
+                              onPressed: () {
+                                SmartDialog.dismiss(status: SmartStatus.dialog);
+                              },
+                            ),
+                            TextButton(
+                              child: Text("确认", style: TextStyle(color: Colors.red)),
+                              onPressed: () async {
+                                try {
+                                  final dir = await getApplicationDocumentsDirectory();
+                                  final p = path.join(dir.path, "htdcxt");
+                                  final result = await File(p).readAsString();
+                                  if (customerPageController.merchantPasswordTextEditingController.text == result) {
+                                    customerPageController.merchantPasswordTextEditingController.text = "";
+                                    SmartDialog.showToast("验证成功！");
+                                    await SmartDialog.dismiss(status: SmartStatus.dialog);
+                                    Get.to(() => MerchantConfigPage());
+                                    Get.find<MerchantConfigPageController>().refreshMerchantConfig();
+                                  } else {
+                                    SmartDialog.showToast("密码不正确！");
+                                    SmartDialog.dismiss(status: SmartStatus.dialog);
+                                  }
+                                } catch (e) {
+                                  SmartDialog.showToast("验证失败！");
+                                  SmartDialog.dismiss(status: SmartStatus.dialog);
+                                }
+                              },
+                            ),
+                          ],
+                        )
+                      ],
+                    ),
+                  );
                 },
               ),
             ],

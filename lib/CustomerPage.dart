@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:liuwei/CustomerPageController.dart';
 import 'package:liuwei/HomePageController.dart';
 import 'package:liuwei/MerchantConfigPageController.dart';
+import 'package:liuwei/OkCancelDialogWidget.dart';
 import 'package:liuwei/Tool.dart';
 import 'package:liuwei/model/MerchantConfig.dart';
 
@@ -47,8 +48,10 @@ class CustomerPage extends StatelessWidget {
                       Text("客户订单", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, color: Colors.deepPurple.shade300)),
                       Spacer(),
                       TextButton(
-                        child: Text(customerPageController.customer.value.isInvalid ? "恢复成有效订单" : "设为无效订单",
-                            style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline)),
+                        child: Text(
+                          customerPageController.customer.value.isInvalid ? "恢复成有效订单" : "设为无效订单",
+                          style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                        ),
                         onPressed: () {
                           SmartDialog.show(
                             builder: (_) {
@@ -64,7 +67,7 @@ class CustomerPage extends StatelessWidget {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            customerPageController.customer.value.isInvalid ? "确定 恢复成有效订单？" : "确定 设为无效订单？\n请确保【已付款】金额不计入账本中！",
+                                            customerPageController.customer.value.isInvalid ? "确定 恢复成有效订单？" : "确定 设为无效订单？",
                                             style: TextStyle(fontSize: 24, color: Colors.red),
                                           ),
                                         ],
@@ -222,8 +225,10 @@ class CustomerPage extends StatelessWidget {
                                                           mainAxisSize: MainAxisSize.min,
                                                           children: [
                                                             SizedBox(height: 10),
-                                                            Text("第${i + 1}次下单：${filter.isEmpty ? "(未点菜)" : ""}",
-                                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                                            Text(
+                                                              "第${i + 1}次下单：${filter.isEmpty ? "(未点菜)" : ""}",
+                                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                            ),
                                                             ...filter.map(
                                                               (cu) {
                                                                 final u = customerPageController.id2Unit[cu.unitId];
@@ -242,6 +247,61 @@ class CustomerPage extends StatelessWidget {
                                                                         crossAxisAlignment: CrossAxisAlignment.center,
                                                                         mainAxisSize: MainAxisSize.min,
                                                                         children: [
+                                                                          if (i + 1 == customerPageController.customer.value.orderedTimes + 1)
+                                                                            IconButton(
+                                                                              icon: Icon(Icons.close, size: 18, color: Colors.red),
+                                                                              style: ButtonStyle(
+                                                                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                                padding: WidgetStatePropertyAll(EdgeInsets.zero),
+                                                                              ),
+                                                                              visualDensity: VisualDensity(vertical: -4, horizontal: -4),
+                                                                              onPressed: () {
+                                                                                SmartDialog.show(
+                                                                                  builder: (_) => DialogWidget(
+                                                                                    columnChildren: [
+                                                                                      ElevatedButton(
+                                                                                        child: Text(
+                                                                                          "仅数量减去1",
+                                                                                          style: TextStyle(color: Colors.white),
+                                                                                        ),
+                                                                                        style: ButtonStyle(
+                                                                                          backgroundColor: WidgetStatePropertyAll(Colors.deepPurpleAccent),
+                                                                                        ),
+                                                                                        onPressed: () {
+                                                                                          customerPageController.customerUnitSubtract(cu, ts: i + 1);
+                                                                                          SmartDialog.dismiss(status: SmartStatus.dialog);
+                                                                                        },
+                                                                                      ),
+                                                                                      SizedBox(height: 10),
+                                                                                      ElevatedButton(
+                                                                                        child: Text(
+                                                                                          "数量清零",
+                                                                                          style: TextStyle(color: Colors.white),
+                                                                                        ),
+                                                                                        style: ButtonStyle(
+                                                                                          backgroundColor: WidgetStatePropertyAll(Colors.deepPurpleAccent),
+                                                                                        ),
+                                                                                        onPressed: () {
+                                                                                          customerPageController.customerUnitSubtract(
+                                                                                            cu,
+                                                                                            ts: i + 1,
+                                                                                            newCount: 0,
+                                                                                          );
+                                                                                          SmartDialog.dismiss(status: SmartStatus.dialog);
+                                                                                        },
+                                                                                      ),
+                                                                                      SizedBox(height: 10),
+                                                                                      TextButton(
+                                                                                        child: Text("返回"),
+                                                                                        onPressed: () {
+                                                                                          SmartDialog.dismiss(status: SmartStatus.dialog);
+                                                                                        },
+                                                                                      ),
+                                                                                    ],
+                                                                                  ),
+                                                                                );
+                                                                              },
+                                                                            ),
                                                                           // 既然 Unit 不为 null，则其所在的 FatherCategory 和 SubCategory 必然存在
                                                                           Container(
                                                                             constraints: BoxConstraints(maxWidth: 300),
@@ -388,6 +448,21 @@ class CustomerPage extends StatelessWidget {
                                     SliverToBoxAdapter(child: SizedBox(height: 100, child: Container())),
                                   ],
                                 ),
+                                Obx(() {
+                                  if (customerPageController.customer.value.isConfirmed) return Container();
+                                  return Positioned(
+                                    top: 0,
+                                    right: 20,
+                                    child: ElevatedButton(
+                                      child: Text("全部折叠"),
+                                      onPressed: () {
+                                        customerPageController.hideList.clear();
+                                        customerPageController.hideList.addAll(customerPageController.getAllShowedFatherCateGory.map((f) => f.id));
+                                        customerPageController.hideList.refresh();
+                                      },
+                                    ),
+                                  );
+                                }),
                                 Obx(
                                   () {
                                     if (customerPageController.customer.value.isConfirmed) {
@@ -424,9 +499,11 @@ class CustomerPage extends StatelessWidget {
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          TextButton(
-                                            child: Text(customerPageController.customer.value.orderedTimes > 0 ? "清空并取消本次加餐" : "清空",
-                                                style: TextStyle(decoration: TextDecoration.underline)),
+                                          ElevatedButton(
+                                            child: Text(
+                                              customerPageController.customer.value.orderedTimes > 0 ? "清空并取消本次加餐" : "清空",
+                                              // style: TextStyle(decoration: TextDecoration.underline),
+                                            ),
                                             onPressed: () {
                                               SmartDialog.show(
                                                 builder: (_) => ShowOkCancel(
@@ -535,20 +612,30 @@ class CustomerPage extends StatelessWidget {
                           },
                         ),
                         SizedBox(width: 10),
-                        TextButton(
-                          child: Text(
-                            "指定金额支付",
-                            style: TextStyle(decoration: TextDecoration.underline),
-                          ),
-                          onPressed: () {},
+                        Obx(
+                          () {
+                            if (!customerPageController.customer.value.isConfirmed) return Container();
+                            return TextButton(
+                              child: Text(
+                                "指定金额支付",
+                                style: TextStyle(decoration: TextDecoration.underline),
+                              ),
+                              onPressed: () {},
+                            );
+                          },
                         ),
                         SizedBox(width: 10),
-                        TextButton(
-                          child: Text(
-                            "向客户退还",
-                            style: TextStyle(decoration: TextDecoration.underline),
-                          ),
-                          onPressed: () {},
+                        Obx(
+                          () {
+                            if (!customerPageController.customer.value.isConfirmed) return Container();
+                            return TextButton(
+                              child: Text(
+                                "向客户退还",
+                                style: TextStyle(decoration: TextDecoration.underline),
+                              ),
+                              onPressed: () {},
+                            );
+                          },
                         ),
                         Spacer(),
                         Padding(

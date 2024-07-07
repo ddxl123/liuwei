@@ -194,13 +194,13 @@ class CustomerPageController extends GetxController {
   }
 
   /// [CustomerUnit] 加 -1
-  Future<void> customerUnitSubtract(CustomerUnit? customerUnit, {RemovedUnit? removedUnit}) async {
+  Future<void> customerUnitSubtract(CustomerUnit? customerUnit, {RemovedUnit? removedUnit, int? ts, int? newCount}) async {
     await gIsar.writeTxn(
       () async {
         if (customerUnit == null) {
           return;
         }
-        await customerUnit.changeTimes2Count(ts: customer.value.orderedTimes + 1, countCallBack: (oldCount) => oldCount - 1);
+        await customerUnit.changeTimes2Count(ts: ts ?? customer.value.orderedTimes + 1, countCallBack: (oldCount) => newCount ?? (oldCount - 1));
         if (customerUnit.times2Counts.isEmpty) {
           customer.value.customerUnits.remove(customerUnit);
           id2CustomerUnit.remove(customerUnit.unitId);
@@ -282,7 +282,6 @@ class CustomerPageController extends GetxController {
 
   /// 完成订单
   Future<void> changeCompletedOrder() async {
-    // TODO: 注意写入时间
     if (customer.value.isCompleted) {
       SmartDialog.show(
         builder: (_) {
@@ -309,9 +308,11 @@ class CustomerPageController extends GetxController {
               cancelText: "返回",
               onOk: () async {
                 customer.value.isCompleted = true;
+                customer.value.customerOrder.completedOrderTime = DateTime.now();
                 customer.refresh();
                 await refreshAndWriteCustomer();
                 await homePageController.refreshAllShowCustomers();
+                SmartDialog.dismiss(status: SmartStatus.dialog);
               },
             );
           },
@@ -325,9 +326,11 @@ class CustomerPageController extends GetxController {
               cancelText: "返回",
               onOk: () async {
                 customer.value.isCompleted = true;
+                customer.value.customerOrder.completedOrderTime = DateTime.now();
                 customer.refresh();
                 await refreshAndWriteCustomer();
                 await homePageController.refreshAllShowCustomers();
+                SmartDialog.dismiss(status: SmartStatus.dialog);
               },
             );
           },

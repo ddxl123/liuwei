@@ -1,12 +1,19 @@
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:isar/isar.dart';
+import 'package:liuwei/OkCancelDialogWidget.dart';
 import 'package:liuwei/model/RemovedUnit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 import 'main.dart';
 import 'model/MerchantConfig.dart';
@@ -20,6 +27,8 @@ class MerchantConfigPageController extends GetxController with GetSingleTickerPr
 
   late final TabController tabController = TabController(length: 3, vsync: this);
 
+  final merchantNameTextEditingController = TextEditingController();
+
   final tableNumTextEditingController = TextEditingController();
 
   /// 桌号分隔符
@@ -31,10 +40,14 @@ class MerchantConfigPageController extends GetxController with GetSingleTickerPr
   /// [FatherCateGory.id]
   final hideList = <String>{}.obs;
 
+  /// 移除历史
+  final removedUnits = <RemovedUnit>[].obs;
+
   @override
   void dispose() {
     super.dispose();
     scrollController.dispose();
+    merchantNameTextEditingController.dispose();
     tabController.dispose();
     tableNumTextEditingController.dispose();
   }
@@ -51,6 +64,7 @@ class MerchantConfigPageController extends GetxController with GetSingleTickerPr
       final id = await gIsar.merchantConfigs.put(merchantConfig.value ?? MerchantConfig());
       final result = await gIsar.merchantConfigs.get(id);
       merchantConfig.value = result;
+      merchantNameTextEditingController.text = merchantConfig.value!.merchantName;
       tableNumTextEditingController.text = (merchantConfig.value!.tableNums ?? []).join(tableNumSplit);
       deviceCodeTextEditingController.text = merchantConfig.value!.pickupCode?.deviceCode.toString() ?? "0";
 
@@ -92,7 +106,8 @@ class MerchantConfigPageController extends GetxController with GetSingleTickerPr
             ..fatherCateGoryName = fatherCateGory.name
             ..subCateGoryName = subCateGory.name
             ..name = unit.name
-            ..price = unit.price,
+            ..price = unit.price
+            ..removeTime = DateTime.now(),
         );
         return;
       }
@@ -105,7 +120,8 @@ class MerchantConfigPageController extends GetxController with GetSingleTickerPr
               ..fatherCateGoryName = fatherCateGory.name
               ..subCateGoryName = subCateGory.name
               ..name = e.name
-              ..price = e.price,
+              ..price = e.price
+              ..removeTime = DateTime.now(),
           );
         }
         await gIsar.removedUnits.putAll(list);
@@ -121,7 +137,8 @@ class MerchantConfigPageController extends GetxController with GetSingleTickerPr
               ..fatherCateGoryName = fatherCateGory.name
               ..subCateGoryName = sub.name
               ..name = u.name
-              ..price = u.price,
+              ..price = u.price
+              ..removeTime = DateTime.now(),
           );
         }
       }
@@ -163,6 +180,13 @@ class MerchantConfigPageController extends GetxController with GetSingleTickerPr
     merchantConfig.refresh();
   }
 
+  /// 获取移除历史
+  Future<void> refreshRemovedUnits() async {
+    removedUnits.clear();
+    removedUnits.addAll(await gIsar.removedUnits.where().findAll());
+    removedUnits.refresh();
+  }
+
   /// 图片存储，返回图片路径
   Future<String?> imageSave({required SubCateGory subCateGory}) async {
     final image = await picker.pickImage(source: ImageSource.gallery);
@@ -182,5 +206,36 @@ class MerchantConfigPageController extends GetxController with GetSingleTickerPr
     subCateGory.imagePath = p.path;
     merchantConfig.refresh();
     return p.path;
+  }
+
+  Future<void> printTest({required BuildContext context}) async {
+    final doc = pw.Document();
+    final page = pw.Page(
+        pageFormat: PdfPageFormat(10 * PdfPageFormat.mm, 10 * PdfPageFormat.mm, marginAll: 0),
+        build: (pw.Context context) {
+          return pw.Column(children: [
+            pw.Text("dadasd"),
+          ]);
+        });
+    doc.addPage(page);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(),
+          body: PdfPreview(
+            enableScrollToPage: true,
+            pageFormats: {"1": page.pageFormat},
+            build: (format) => doc.save(),
+          ),
+        ),
+      ),
+    );
+    // await Printing.layoutPdf(
+    //   onLayout: (PdfPageFormat format) async {
+    //     return doc.save();
+    //   },
+    // );
   }
 }

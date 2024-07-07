@@ -21,4 +21,7 @@ class RemovedUnit {
 
   /// 价格，单位：元
   double price = 0;
+
+  /// 移除时间
+  DateTime removeTime = DateTime(0);
 }
